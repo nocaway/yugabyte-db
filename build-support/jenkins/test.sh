@@ -134,27 +134,27 @@ log "YB_DOWNLOAD_THIRDPARTY=$YB_DOWNLOAD_THIRDPARTY"
 
 # This is normally done in set_build_root, but we need to decide earlier because this is factored
 # into the decision of whether to use LTO.
-decide_whether_to_use_linuxbrew
+# decide_whether_to_use_linuxbrew
 
-if [[ -z ${YB_LINKING_TYPE:-} ]]; then
-  if ! is_mac && [[
-        ${YB_COMPILER_TYPE} =~ ^clang[0-9]+$ &&
-        ${BUILD_TYPE} == "release"
-      ]]; then
-    export YB_LINKING_TYPE=full-lto
-  else
-    export YB_LINKING_TYPE=dynamic
-  fi
-  log "Automatically decided to set YB_LINKING_TYPE to ${YB_LINKING_TYPE} based on:" \
-      "YB_COMPILER_TYPE=${YB_COMPILER_TYPE}," \
-      "BUILD_TYPE=${BUILD_TYPE}," \
-      "YB_USE_LINUXBREW=${YB_USE_LINUXBREW}," \
-      "YB_LINUXBREW_DIR=${YB_LINUXBREW_DIR:-undefined}."
-else
-  log "YB_LINKING_TYPE is already set to ${YB_LINKING_TYPE}"
-fi
-log "YB_LINKING_TYPE=${YB_LINKING_TYPE}"
-export YB_LINKING_TYPE
+# if [[ -z ${YB_LINKING_TYPE:-} ]]; then
+#   if ! is_mac && [[
+#         ${YB_COMPILER_TYPE} =~ ^clang[0-9]+$ &&
+#         ${BUILD_TYPE} == "release"
+#       ]]; then
+#     export YB_LINKING_TYPE=full-lto
+#   else
+#     export YB_LINKING_TYPE=dynamic
+#   fi
+#   log "Automatically decided to set YB_LINKING_TYPE to ${YB_LINKING_TYPE} based on:" \
+#       "YB_COMPILER_TYPE=${YB_COMPILER_TYPE}," \
+#       "BUILD_TYPE=${BUILD_TYPE}," \
+#       "YB_USE_LINUXBREW=${YB_USE_LINUXBREW}," \
+#       "YB_LINUXBREW_DIR=${YB_LINUXBREW_DIR:-undefined}."
+# else
+#   log "YB_LINKING_TYPE is already set to ${YB_LINKING_TYPE}"
+# fi
+# log "YB_LINKING_TYPE=${YB_LINKING_TYPE}"
+# export YB_LINKING_TYPE
 
 # -------------------------------------------------------------------------------------------------
 # Build root setup and build directory cleanup
@@ -312,19 +312,19 @@ export YB_SKIP_INITIAL_SYS_CATALOG_SNAPSHOT=0
 # Dependency graph analysis allowing to determine what tests to run.
 # -------------------------------------------------------------------------------------------------
 
-if [[ $YB_RUN_AFFECTED_TESTS_ONLY == "1" ]]; then
-  if ! ( set -x
-         "${YB_SRC_ROOT}/python/yb/dependency_graph.py" \
-           --build-root "${BUILD_ROOT}" \
-           self-test \
-           --rebuild-graph ); then
-    # Trying to diagnose this error:
-    # https://gist.githubusercontent.com/mbautin/c5c6f14714f7655c10620d8e658e1f5b/raw
-    log "dependency_graph.py failed, listing all pb.{h,cc} files in the build directory"
-    ( set -x; find "$BUILD_ROOT" -name "*.pb.h" -or -name "*.pb.cc" )
-    fatal "Dependency graph construction failed"
-  fi
-fi
+# if [[ $YB_RUN_AFFECTED_TESTS_ONLY == "1" ]]; then
+#   if ! ( set -x
+#          "${YB_SRC_ROOT}/python/yb/dependency_graph.py" \
+#            --build-root "${BUILD_ROOT}" \
+#            self-test \
+#            --rebuild-graph ); then
+#     # Trying to diagnose this error:
+#     # https://gist.githubusercontent.com/mbautin/c5c6f14714f7655c10620d8e658e1f5b/raw
+#     log "dependency_graph.py failed, listing all pb.{h,cc} files in the build directory"
+#     ( set -x; find "$BUILD_ROOT" -name "*.pb.h" -or -name "*.pb.cc" )
+#     fatal "Dependency graph construction failed"
+#   fi
+# fi
 
 # Save the current HEAD commit in case we build Java below and add a new commit. This is used for
 # the following purposes:
@@ -339,7 +339,7 @@ current_git_commit=$(git rev-parse HEAD)
 # Final LTO linking
 # -------------------------------------------------------------------------------------------------
 
-export YB_SKIP_FINAL_LTO_LINK=0
+# export YB_SKIP_FINAL_LTO_LINK=0
 
 # -------------------------------------------------------------------------------------------------
 # Java build

@@ -131,13 +131,6 @@ build_cpp_code() {
   set_yb_src_root "$old_yb_src_root"
 }
 
-# cleanup() {
-#   if [[ -n ${BUILD_ROOT:-} && ${DONT_DELETE_BUILD_ROOT} == "0" ]]; then
-#     log "Running the script to clean up build artifacts..."
-#     "$YB_BUILD_SUPPORT_DIR/jenkins/post-build-clean.sh"
-#   fi
-# }
-
 # =================================================================================================
 # Main script
 # =================================================================================================
@@ -353,12 +346,6 @@ CTEST_FULL_OUTPUT_PATH="${BUILD_ROOT}"/ctest-full.log
 
 TEST_LOG_DIR="${BUILD_ROOT}/test-logs"
 
-# If we're running inside Jenkins (the BUILD_ID is set), then install an exit handler which will
-# clean up all of our build results.
-# if is_jenkins; then
-#   trap cleanup EXIT
-# fi
-
 configure_remote_compilation
 
 export NO_REBUILD_THIRDPARTY=1
@@ -367,7 +354,6 @@ THIRDPARTY_BIN=$YB_SRC_ROOT/thirdparty/installed/bin
 export PPROF_PATH=$THIRDPARTY_BIN/pprof
 
 # Configure the build
-#
 
 cd "$BUILD_ROOT"
 
