@@ -134,7 +134,7 @@ log "YB_DOWNLOAD_THIRDPARTY=$YB_DOWNLOAD_THIRDPARTY"
 
 # This is normally done in set_build_root, but we need to decide earlier because this is factored
 # into the decision of whether to use LTO.
-# decide_whether_to_use_linuxbrew
+decide_whether_to_use_linuxbrew
 
 if [[ -z ${YB_LINKING_TYPE:-} ]]; then
   if ! is_mac && [[
