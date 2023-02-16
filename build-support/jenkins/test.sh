@@ -165,15 +165,15 @@ set_build_root
 
 set_common_test_paths
 
-# # As soon as we know build root, we need to do the necessary workspace cleanup.
-# if is_jenkins; then
-#   # Delete the build root by default on Jenkins.
-#   DONT_DELETE_BUILD_ROOT=${DONT_DELETE_BUILD_ROOT:-0}
-# else
-#   log "Not running on Jenkins, not deleting the build root by default."
-#   # Don't delete the build root by default.
-#   DONT_DELETE_BUILD_ROOT=${DONT_DELETE_BUILD_ROOT:-1}
-# fi
+# As soon as we know build root, we need to do the necessary workspace cleanup.
+if is_jenkins; then
+  # Delete the build root by default on Jenkins.
+  DONT_DELETE_BUILD_ROOT=${DONT_DELETE_BUILD_ROOT:-0}
+else
+  log "Not running on Jenkins, not deleting the build root by default."
+  # Don't delete the build root by default.
+  DONT_DELETE_BUILD_ROOT=${DONT_DELETE_BUILD_ROOT:-1}
+fi
 
 # mkdir_safe "${BUILD_ROOT}"
 
