@@ -64,18 +64,18 @@ echo "Build type: ${BUILD_TYPE}";
 
 set_compiler_type_based_on_jenkins_job_name
 
-echo "Deleting branches starting with 'arcpatch-D'"
-current_branch=$( git rev-parse --abbrev-ref HEAD )
-for branch_name in $( git for-each-ref --format="%(refname)" refs/heads/ ); do
-  branch_name=${branch_name#refs/heads/}
-  if [[ "$branch_name" =~ ^arcpatch-D ]]; then
-    if [ "$branch_name" == "$current_branch" ]; then
-      echo "'$branch_name' is the current branch, not deleting."
-    else
-      ( set -x; git branch -D "$branch_name" )
-    fi
-  fi
-done
+# echo "Deleting branches starting with 'arcpatch-D'"
+# current_branch=$( git rev-parse --abbrev-ref HEAD )
+# for branch_name in $( git for-each-ref --format="%(refname)" refs/heads/ ); do
+#   branch_name=${branch_name#refs/heads/}
+#   if [[ "$branch_name" =~ ^arcpatch-D ]]; then
+#     if [ "$branch_name" == "$current_branch" ]; then
+#       echo "'$branch_name' is the current branch, not deleting."
+#     else
+#       ( set -x; git branch -D "$branch_name" )
+#     fi
+#   fi
+# done
 
 if [ -n "${YB_NUM_TESTS_TO_RUN:-}" ]; then
 
@@ -93,29 +93,29 @@ export YB_BUILD_JAVA=${YB_BUILD_JAVA:-1}
 export YB_BUILD_PYTHON=${YB_BUILD_PYTHON:-0}
 export YB_BUILD_CPP=${YB_BUILD_CPP:-1}
 
-echo
-echo ----------------------------------------------------------------------------------------------
-echo "ifconfig (without the 127.0.x.x IPs)"
-echo ----------------------------------------------------------------------------------------------
-echo
+# echo
+# echo ----------------------------------------------------------------------------------------------
+# echo "ifconfig (without the 127.0.x.x IPs)"
+# echo ----------------------------------------------------------------------------------------------
+# echo
 
-set +e
-ifconfig | grep -vE "inet 127[.]0[.]"
-set -e
+# set +e
+# ifconfig | grep -vE "inet 127[.]0[.]"
+# set -e
 
-echo
-echo ----------------------------------------------------------------------------------------------
-echo
+# echo
+# echo ----------------------------------------------------------------------------------------------
+# echo
 
-echo "Max number of open files:"
-ulimit -n
-echo
+# echo "Max number of open files:"
+# ulimit -n
+# echo
 
-show_disk_usage
+# show_disk_usage
 
-if is_mac; then
-  "$YB_BUILD_SUPPORT_DIR"/kill_long_running_minicluster_daemons.py
-fi
+# if is_mac; then
+#   "$YB_BUILD_SUPPORT_DIR"/kill_long_running_minicluster_daemons.py
+# fi
 
 set +e
 "$YB_BUILD_SUPPORT_DIR"/jenkins/test.sh
@@ -124,10 +124,10 @@ exit_code=$?
 set -e
 
 # Un-gzip build log files for easy viewing in the Jenkins UI.
-for f in build/debug/test-logs/*.txt.gz; do
-  if [ -f "$f" ]; then
-    gzip -d "$f"
-  fi
-done
+# for f in build/debug/test-logs/*.txt.gz; do
+#   if [ -f "$f" ]; then
+#     gzip -d "$f"
+#   fi
+# done
 
 exit $exit_code

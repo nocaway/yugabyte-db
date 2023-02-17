@@ -175,9 +175,6 @@ else
   DONT_DELETE_BUILD_ROOT=${DONT_DELETE_BUILD_ROOT:-1}
 fi
 
-# mkdir_safe "${BUILD_ROOT}"
-
-# readonly BUILD_ROOT
 export BUILD_ROOT
 
 # -------------------------------------------------------------------------------------------------
@@ -334,16 +331,6 @@ fi
 #   tests to run in Phabricator builds. If we just diff with origin/master, we'll always pick up
 #   pom.xml changes we've just made, forcing us to always run Java tests.
 current_git_commit=$(git rev-parse HEAD)
-
-# -------------------------------------------------------------------------------------------------
-# Final LTO linking
-# -------------------------------------------------------------------------------------------------
-
-# export YB_SKIP_FINAL_LTO_LINK=0
-
-# -------------------------------------------------------------------------------------------------
-# Java build
-# -------------------------------------------------------------------------------------------------
 
 export YB_MVN_LOCAL_REPO=$BUILD_ROOT/m2_repository
 
