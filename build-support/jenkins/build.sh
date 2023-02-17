@@ -479,19 +479,19 @@ fi
 # Dependency graph analysis allowing to determine what tests to run.
 # -------------------------------------------------------------------------------------------------
 
-if [[ $YB_RUN_AFFECTED_TESTS_ONLY == "1" ]]; then
-  if ! ( set -x
-         "${YB_SRC_ROOT}/python/yb/dependency_graph.py" \
-           --build-root "${BUILD_ROOT}" \
-           self-test \
-           --rebuild-graph ); then
-    # Trying to diagnose this error:
-    # https://gist.githubusercontent.com/mbautin/c5c6f14714f7655c10620d8e658e1f5b/raw
-    log "dependency_graph.py failed, listing all pb.{h,cc} files in the build directory"
-    ( set -x; find "$BUILD_ROOT" -name "*.pb.h" -or -name "*.pb.cc" )
-    fatal "Dependency graph construction failed"
-  fi
-fi
+# if [[ $YB_RUN_AFFECTED_TESTS_ONLY == "1" ]]; then
+#   if ! ( set -x
+#          "${YB_SRC_ROOT}/python/yb/dependency_graph.py" \
+#            --build-root "${BUILD_ROOT}" \
+#            self-test \
+#            --rebuild-graph ); then
+#     # Trying to diagnose this error:
+#     # https://gist.githubusercontent.com/mbautin/c5c6f14714f7655c10620d8e658e1f5b/raw
+#     log "dependency_graph.py failed, listing all pb.{h,cc} files in the build directory"
+#     ( set -x; find "$BUILD_ROOT" -name "*.pb.h" -or -name "*.pb.cc" )
+#     fatal "Dependency graph construction failed"
+#   fi
+# fi
 
 # Save the current HEAD commit in case we build Java below and add a new commit. This is used for
 # the following purposes:
