@@ -317,6 +317,23 @@ extern RelOptInfo *fetch_upper_rel(PlannerInfo *root, UpperRelationKind kind,
 								   Relids relids);
 extern Relids find_childrel_parents(PlannerInfo *root, RelOptInfo *rel);
 extern ParamPathInfo *get_baserel_parampathinfo(PlannerInfo *root,
+<<<<<<< pathnode.h
+						  RelOptInfo *baserel,
+						  Relids required_outer);
+extern ParamPathInfo *get_joinrel_parampathinfo(PlannerInfo *root,
+						  RelOptInfo *joinrel,
+						  Path *outer_path,
+						  Path *inner_path,
+						  SpecialJoinInfo *sjinfo,
+						  Relids required_outer,
+						  List **restrict_clauses);
+extern void yb_accumulate_batching_info(List *paths, 
+						  Relids *batchedrelids, Relids *unbatchedrelids);
+extern ParamPathInfo *get_appendrel_parampathinfo(RelOptInfo *appendrel,
+							Relids required_outer);
+extern ParamPathInfo *find_param_path_info(RelOptInfo *rel,
+					 Relids required_outer);
+=======
 												RelOptInfo *baserel,
 												Relids required_outer);
 extern ParamPathInfo *get_joinrel_parampathinfo(PlannerInfo *root,
@@ -331,6 +348,7 @@ extern ParamPathInfo *get_appendrel_parampathinfo(RelOptInfo *appendrel,
 extern ParamPathInfo *find_param_path_info(RelOptInfo *rel,
 										   Relids required_outer);
 
+>>>>>>> pathnode.h
 extern ParamPathInfo *yb_find_batched_param_path_info(
 	RelOptInfo *rel,
 	Relids required_outer,

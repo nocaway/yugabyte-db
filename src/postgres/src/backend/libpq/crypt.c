@@ -28,6 +28,18 @@
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "pg_yb_utils.h"
 
+static bool
+yb_is_role_allowed_for_tserver_auth(const char* role, char **logdetail)
+{
+	/* Currently disallow any role but "postgres" */
+	if (strcmp(role, "postgres"))
+	{
+		*logdetail = psprintf(
+			_("Role must be \"postgres\": got \"%s\"."), role);
+		return false;
+	}
+	return true;
+}
 
 /*
  * Fetch stored password for a user, for authentication.
@@ -85,6 +97,15 @@ get_role_password(const char *role, const char **logdetail)
 	return shadow_pass;
 }
 
+<<<<<<< crypt.c
+bool
+yb_get_role_password(const char *role, char **logdetail, uint64_t* auth_key)
+{
+	if (!yb_is_role_allowed_for_tserver_auth(role, logdetail))
+		return false;
+	*auth_key = YBCGetSharedAuthKey();
+	return true;
+=======
 /*
  * Fetch stored key from Yugabyte tserver shared memory, for authentication.
  *
@@ -95,7 +116,7 @@ get_role_password(const char *role, const char **logdetail)
  * sent to the client, to avoid giving away user information!
  */
 uint64_t *
-yb_get_role_password(const char *role, char **logdetail)
+yb_get_role_password(const char *role, const char **logdetail)
 {
 	uint64_t   *auth_key = NULL;
 
@@ -111,6 +132,7 @@ yb_get_role_password(const char *role, char **logdetail)
 	HandleYBStatus(YBCGetSharedAuthKey(auth_key));
 
 	return auth_key;
+>>>>>>> crypt.c
 }
 
 /*
@@ -328,9 +350,17 @@ plain_crypt_verify(const char *role, const char *shadow_pass,
  */
 int
 yb_plain_key_verify(const char *role,
+<<<<<<< crypt.c
+					uint64_t server_auth_key,
+					uint64_t client_auth_key,
+					char **logdetail)
+{
+	if (!yb_is_role_allowed_for_tserver_auth(role, logdetail))
+		return STATUS_ERROR;
+=======
 					const uint64_t server_auth_key,
 					const uint64_t client_auth_key,
-					char **logdetail)
+					const char **logdetail)
 {
 	/* Currently disallow any role but "postgres" */
 	if (strncmp(role, "postgres", 8))
@@ -339,14 +369,12 @@ yb_plain_key_verify(const char *role,
 							  role);
 		return STATUS_ERROR;	/* invalid user */
 	}
+>>>>>>> crypt.c
 
 	/* Simply compare the plain auth keys */
 	if (server_auth_key == client_auth_key)
 		return STATUS_OK;
-	else
-	{
-		*logdetail = psprintf(_("Auth key does not match for user \"%s\"."),
-							  role);
-		return STATUS_ERROR;
-	}
+
+	*logdetail = psprintf(_("Auth key does not match for user \"%s\"."), role);
+	return STATUS_ERROR;
 }

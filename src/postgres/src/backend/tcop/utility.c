@@ -77,6 +77,10 @@
 
 #include "pg_yb_utils.h"
 #include "commands/ybccmds.h"
+<<<<<<< utility.c
+#include "commands/yb_profile.h"
+
+=======
 
 /* Hook for plugins to get control in ProcessUtility() */
 
@@ -85,6 +89,7 @@
  * Setting YBProcessUtilityDefaultHook directly guaranties it will be the first one.
  * It will be called after all plugins hooks.
  */
+>>>>>>> utility.c
 static void YBProcessUtilityDefaultHook(PlannedStmt *pstmt,
                                         const char *queryString,
 										bool readOnlyTree,
@@ -216,6 +221,52 @@ ClassifyUtilityCommandAsReadOnly(Node *parsetree)
 		case T_CreateTableSpaceStmt:
 		case T_CreateTransformStmt:
 		case T_CreateTrigStmt:
+<<<<<<< utility.c
+		case T_CompositeTypeStmt:
+		case T_CreateEnumStmt:
+		case T_CreateRangeStmt:
+		case T_AlterEnumStmt:
+		case T_ViewStmt:
+		case T_DropStmt:
+		case T_DropdbStmt:
+		case T_DropTableSpaceStmt:
+		case T_DropRoleStmt:
+		case T_GrantStmt:
+		case T_GrantRoleStmt:
+		case T_AlterDefaultPrivilegesStmt:
+		case T_TruncateStmt:
+		case T_DropOwnedStmt:
+		case T_ReassignOwnedStmt:
+		case T_AlterTSDictionaryStmt:
+		case T_AlterTSConfigurationStmt:
+		case T_CreateExtensionStmt:
+		case T_AlterExtensionStmt:
+		case T_AlterExtensionContentsStmt:
+		case T_CreateFdwStmt:
+		case T_AlterFdwStmt:
+		case T_CreateForeignServerStmt:
+		case T_AlterForeignServerStmt:
+		case T_CreateUserMappingStmt:
+		case T_AlterUserMappingStmt:
+		case T_DropUserMappingStmt:
+		case T_AlterTableSpaceOptionsStmt:
+		case T_CreateForeignTableStmt:
+		case T_ImportForeignSchemaStmt:
+		case T_SecLabelStmt:
+		case T_CreatePublicationStmt:
+		case T_AlterPublicationStmt:
+		case T_CreateSubscriptionStmt:
+		case T_AlterSubscriptionStmt:
+		case T_DropSubscriptionStmt:
+		case T_YbCreateProfileStmt:
+		case T_YbDropProfileStmt:
+			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
+			PreventCommandIfParallelMode(CreateCommandTag(parsetree));
+			break;
+		default:
+			/* do nothing */
+			break;
+=======
 		case T_CreateUserMappingStmt:
 		case T_CreatedbStmt:
 		case T_DefineStmt:
@@ -417,6 +468,7 @@ ClassifyUtilityCommandAsReadOnly(Node *parsetree)
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(parsetree));
 			return 0;			/* silence stupider compilers */
+>>>>>>> utility.c
 	}
 }
 
@@ -1113,6 +1165,17 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 					ExecSecLabelStmt(stmt);
 				break;
 			}
+
+		case T_YbCreateProfileStmt:
+			PreventInTransactionBlock(isTopLevel, "CREATE PROFILE");
+			YbCreateProfile((YbCreateProfileStmt *) parsetree);
+			break;
+
+		case T_YbDropProfileStmt:
+			/* no event triggers for global objects */
+			PreventInTransactionBlock(isTopLevel, "DROP PROFILE");
+			YbDropProfile((YbDropProfileStmt *) parsetree);
+			break;
 
 		default:
 			/* All other statement types have event trigger support */
@@ -2749,10 +2812,20 @@ CreateCommandTag(Node *parsetree)
 					tag = CMDTAG_DROP_STATISTICS;
 					break;
 				case OBJECT_YBTABLEGROUP:
+<<<<<<< utility.c
+					tag = "DROP TABLEGROUP";
+					break;
+				case OBJECT_YBPROFILE:
+					tag = "DROP PROFILE";
+					break;
+				default:
+					tag = "???";
+=======
 					tag = CMDTAG_DROP_YBTABLEGROUP;
 					break;
 				default:
 					tag = CMDTAG_UNKNOWN;
+>>>>>>> utility.c
 			}
 			break;
 
@@ -3329,6 +3402,14 @@ CreateCommandTag(Node *parsetree)
 						break;
 				}
 			}
+			break;
+
+		case T_YbCreateProfileStmt:
+			tag = "CREATE PROFILE";
+			break;
+
+		case T_YbDropProfileStmt:
+			tag = "DROP PROFILE";
 			break;
 
 		default:

@@ -258,14 +258,42 @@ extern PGDLLIMPORT bool log_statement_stats;
 extern PGDLLIMPORT bool log_btree_build_stats;
 
 extern PGDLLIMPORT bool check_function_bodies;
+<<<<<<< guc.h
+extern bool default_with_oids;
+extern bool session_auth_is_superuser;
+extern bool yb_enable_memory_tracking;
+
+extern int	log_min_error_statement;
+=======
 extern PGDLLIMPORT bool session_auth_is_superuser;
 
 extern PGDLLIMPORT bool log_duration;
 extern PGDLLIMPORT int log_parameter_max_length;
 extern PGDLLIMPORT int log_parameter_max_length_on_error;
 extern PGDLLIMPORT int log_min_error_statement;
+>>>>>>> guc.h
 extern PGDLLIMPORT int log_min_messages;
 extern PGDLLIMPORT int client_min_messages;
+<<<<<<< guc.h
+extern int	log_min_duration_sample;
+extern int	log_min_duration_statement;
+extern int	log_temp_files;
+extern double log_statement_sample_rate;
+extern double log_xact_sample_rate;
+
+extern int	yb_bnl_batch_size;
+extern bool  yb_bnl_enable_hashing;
+
+extern int	temp_file_limit;
+
+extern int	num_temp_buffers;
+
+extern char *cluster_name;
+extern PGDLLIMPORT char *ConfigFileName;
+extern char *HbaFileName;
+extern char *IdentFileName;
+extern char *external_pid_file;
+=======
 extern PGDLLIMPORT int log_min_duration_sample;
 extern PGDLLIMPORT int log_min_duration_statement;
 extern PGDLLIMPORT int log_temp_files;
@@ -283,6 +311,7 @@ extern PGDLLIMPORT char *ConfigFileName;
 extern PGDLLIMPORT char *HbaFileName;
 extern PGDLLIMPORT char *IdentFileName;
 extern PGDLLIMPORT char *external_pid_file;
+>>>>>>> guc.h
 
 extern PGDLLIMPORT char *application_name;
 

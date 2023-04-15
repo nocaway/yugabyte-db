@@ -81,6 +81,48 @@
 
 /*  YB includes. */
 #include "access/sysattr.h"
+<<<<<<< nodeModifyTable.c
+#include "catalog/dependency.h"
+#include "catalog/pg_database.h"
+#include "catalog/pg_depend.h"
+#include "catalog/pg_shdepend.h"
+#include "catalog/yb_catalog_version.h"
+#include "executor/ybcModifyTable.h"
+#include "parser/parsetree.h"
+#include "pg_yb_utils.h"
+#include "optimizer/ybcplan.h"
+#include "utils/syscache.h"
+
+static bool ExecOnConflictUpdate(ModifyTableState *mtstate,
+					 ResultRelInfo *resultRelInfo,
+					 ItemPointer conflictTid,
+					 TupleTableSlot *planSlot,
+					 TupleTableSlot *excludedSlot,
+					 EState *estate,
+					 bool canSetTag,
+					 TupleTableSlot **returning);
+static TupleTableSlot *ExecPrepareTupleRouting(ModifyTableState *mtstate,
+						EState *estate,
+						PartitionTupleRouting *proute,
+						ResultRelInfo *targetRelInfo,
+						TupleTableSlot *slot);
+static ResultRelInfo *getTargetResultRelInfo(ModifyTableState *node);
+static void ExecSetupChildParentMapForTcs(ModifyTableState *mtstate);
+static void ExecSetupChildParentMapForSubplan(ModifyTableState *mtstate);
+static TupleConversionMap *tupconv_map_for_subplan(ModifyTableState *node,
+						int whichplan);
+
+static void YbPostProcessDml(CmdType cmd_type,
+							 Relation rel,
+							 TupleDesc desc,
+							 HeapTuple newtup);
+static void YbHandlePossibleObjectPinning(TupleDesc desc,
+										  HeapTuple tuple,
+										  bool is_shared_dep);
+
+/*
+ * Verify that the tuples to be produced by INSERT or UPDATE match the
+=======
 #include "catalog/pg_database.h"
 #include "executor/ybcModifyTable.h"
 #include "optimizer/ybcplan.h"
@@ -212,6 +254,7 @@ static TupleTableSlot *mergeGetUpdateNewTuple(ResultRelInfo *relinfo,
 
 /*
  * Verify that the tuples to be produced by INSERT match the
+>>>>>>> nodeModifyTable.c
  * target relation's rowtype
  *
  * We do this to guard against stale plans.  If plan invalidation is
@@ -1089,10 +1132,17 @@ ExecInsert(ModifyTableContext *context,
 		 * one; except that if we got here via tuple-routing, we don't need to
 		 * if there's no BR trigger defined on the partition.
 		 */
+<<<<<<< nodeModifyTable.c
+		if (resultRelInfo->ri_PartitionCheck &&
+				(resultRelInfo->ri_RootResultRelInfo == NULL ||
+				 (resultRelInfo->ri_TrigDesc &&
+					resultRelInfo->ri_TrigDesc->trig_insert_before_row)))
+=======
 		if (resultRelationDesc->rd_rel->relispartition &&
 			(resultRelInfo->ri_RootResultRelInfo == NULL ||
 			 (resultRelInfo->ri_TrigDesc &&
 			  resultRelInfo->ri_TrigDesc->trig_insert_before_row)))
+>>>>>>> nodeModifyTable.c
 			ExecPartitionCheck(resultRelInfo, slot, estate, true);
 
 		if (onconflict != ONCONFLICT_NONE && resultRelInfo->ri_NumIndices > 0)
@@ -1253,6 +1303,10 @@ ExecInsert(ModifyTableContext *context,
 			/* insert the tuple normally */
 			if (IsYBRelation(resultRelationDesc))
 			{
+<<<<<<< nodeModifyTable.c
+				MemoryContext oldContext = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
+				newId = YBCHeapInsert(slot, tuple, estate);
+=======
 				/*
 				 * YB_TODO(neil@yugabyte) Write Yugabyte API to work with slot.
 				 *
@@ -1264,12 +1318,18 @@ ExecInsert(ModifyTableContext *context,
 				HeapTuple tuple = ExecFetchSlotHeapTuple(slot, true, &shouldFree);
 
 				YBCHeapInsert(resultRelInfo, slot, tuple, estate);
+>>>>>>> nodeModifyTable.c
 
 				/* insert index entries for tuple */
 				if (YBCRelInfoHasSecondaryIndices(resultRelInfo))
+<<<<<<< nodeModifyTable.c
+					recheckIndexes = ExecInsertIndexTuples(slot, tuple, estate, false, NULL, NIL);
+				MemoryContextSwitchTo(oldContext);
+=======
 					recheckIndexes = ExecInsertIndexTuples(resultRelInfo, slot, estate, false, true,
 														   NULL, NIL,
 														   NIL /* no_update_index_list */);
+>>>>>>> nodeModifyTable.c
 			}
 			else
 			{
@@ -1286,6 +1346,11 @@ ExecInsert(ModifyTableContext *context,
 			}
 		}
 	}
+
+	YbPostProcessDml(CMD_INSERT,
+					 resultRelationDesc,
+					 slot->tts_tupleDescriptor,
+					 tuple);
 
 	if (canSetTag)
 		(estate->es_processed)++;
@@ -1338,7 +1403,11 @@ ExecInsert(ModifyTableContext *context,
 		ExecWithCheckOptions(WCO_VIEW_CHECK, resultRelInfo, slot, estate);
 
 	/* Process RETURNING if present */
+<<<<<<< nodeModifyTable.c
+  	if (resultRelInfo->ri_projectReturning)
+=======
 	if (resultRelInfo->ri_projectReturning)
+>>>>>>> nodeModifyTable.c
 		result = ExecProcessReturning(resultRelInfo, slot, planSlot);
 
 	if (inserted_tuple)
@@ -1623,8 +1692,19 @@ ExecDelete(ModifyTableContext *context,
 	}
 	else if (IsYBRelation(resultRelationDesc))
 	{
-		bool row_found = YBCExecuteDelete(resultRelationDesc, planSlot, estate,
-										  mtstate, changingPart);
+<<<<<<< nodeModifyTable.c
+		bool row_found = YBCExecuteDelete(resultRelationDesc,
+										  planSlot,
+										  ((ModifyTable *) mtstate->ps.plan)->ybReturningColumns,
+										  mtstate->yb_fetch_target_tuple,
+										  estate->yb_es_is_single_row_modify_txn,
+										  changingPart,
+										  estate);
+
+=======
+		bool row_found = YBCExecuteDelete(resultRelationDesc, context->planSlot, estate,
+										  context->mtstate, changingPart);
+>>>>>>> nodeModifyTable.c
 		if (!row_found)
 		{
 			/*
@@ -1636,7 +1716,7 @@ ExecDelete(ModifyTableContext *context,
 
 		if (YBCRelInfoHasSecondaryIndices(resultRelInfo))
 		{
-			Datum	ybctid = YBCGetYBTupleIdFromSlot(planSlot);
+			Datum	ybctid = YBCGetYBTupleIdFromSlot(context->planSlot);
 
 			/* Delete index entries of the old tuple */
 			ExecDeleteIndexTuples(resultRelInfo, ybctid, oldtuple, estate);
@@ -1814,6 +1894,11 @@ ldelete:;
 		 */
 	}
 
+	YbPostProcessDml(CMD_DELETE,
+					 resultRelationDesc,
+					 NULL /* desc */,
+					 NULL /* newtup */);
+
 	if (canSetTag)
 		(estate->es_processed)++;
 
@@ -1839,9 +1924,15 @@ ldelete:;
 		}
 		else if (IsYBRelation(resultRelationDesc))
 		{
-			if (mtstate->yb_mt_is_single_row_update_or_delete)
+<<<<<<< nodeModifyTable.c
+			if (mtstate->yb_fetch_target_tuple)
 			{
-				slot = planSlot;
+				slot = ExecFilterJunk(resultRelInfo->ri_junkFilter, planSlot);
+			}
+=======
+			if (context->mtstate->yb_mt_is_single_row_update_or_delete)
+			{
+				slot = context->planSlot;
 			}
 
 #ifdef YB_TODO
@@ -1849,11 +1940,21 @@ ldelete:;
 			 * - Check to make sure that ExecFilterJunk is no longer needed here.
 			 * - Find where Yugabyte should plugin new code.
 			 */
+>>>>>>> nodeModifyTable.c
 			else
 			{
-				slot = ExecFilterJunk(resultRelInfo->ri_junkFilter, planSlot);
+<<<<<<< nodeModifyTable.c
+				/* No target tuple means no need for junk filters. */
+				Assert(resultRelInfo->ri_junkFilter == NULL);
+				slot = planSlot;
+			}
+
+			delbuffer = InvalidBuffer;
+=======
+				slot = ExecFilterJunk(resultRelInfo->ri_junkFilter, context->planSlot);
 			}
 #endif
+>>>>>>> nodeModifyTable.c
 		}
 		else
 		{
@@ -2336,7 +2437,7 @@ lreplace:;
 	 * have it validate all remaining checks.
 	 */
 	if (resultRelationDesc->rd_att->constr)
-		ExecConstraints(resultRelInfo, slot, estate);
+		ExecConstraints(resultRelInfo, slot, estate, context->mtstate);
 
 	/*
 	 * replace the heap tuple
@@ -2379,7 +2480,8 @@ ExecUpdateEpilogue(ModifyTableContext *context, UpdateContext *updateCxt,
 		recheckIndexes = ExecInsertIndexTuples(resultRelInfo,
 											   slot, context->estate,
 											   true, false,
-											   NULL, NIL);
+											   NULL, NIL,
+											   NIL /* no_update_index_list */);
 
 	/* AFTER ROW UPDATE Triggers */
 	ExecARUpdateTriggers(context->estate, resultRelInfo,
@@ -2512,10 +2614,12 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 	List	   *recheckIndexes = NIL;
 	TM_Result	result;
 
-	ModifyTable *node = (ModifyTable *)mtstate->ps.plan;
-	OnConflictAction onconflict = node->onConflictAction;
-
-	/* Yugabyte workaround variables */
+	/* Yugabyte variables
+	 * YB_TODO(neil) Reintro local variable if needed. Otherwise, remove them.
+	 */
+	ModifyTableState *mtstate = context->mtstate;
+	/* ModifyTable *node = (ModifyTable *)mtstate->ps.plan; */
+	/* OnConflictAction onconflict = node->onConflictAction; */
 	bool shouldFree = true;
 	HeapTuple tuple = NULL;
 
@@ -2589,7 +2693,9 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 	{
 		bool partition_constraint_failed;
 
+		/* YB_TODO(neil) Check this code.
 		yb_lreplace:;
+		*/
 		/*
 		 * Check the constraints of the tuple.
 		 */
@@ -2623,6 +2729,10 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 		 */
 		if (partition_constraint_failed)
 		{
+#ifdef YB_TODO
+			/* YB_TODO(neil)
+			 * ExecCrossPartitionUpdate() is replaced by ExecUpdateAct()
+			 */
 			TupleTableSlot *inserted_tuple, *retry_slot;
 			bool            retry;
 
@@ -2636,7 +2746,7 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
  			 */
 
 			retry = !ExecCrossPartitionUpdate(mtstate, resultRelInfo, tupleid,
-											  oldtuple, slot, planSlot,
+											  oldtuple, slot, context->planSlot,
 											  epqstate, canSetTag,
 											  &retry_slot, &inserted_tuple);
 			if (retry)
@@ -2646,6 +2756,8 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
  			}
 
 			return inserted_tuple;
+#endif
+			return NULL;
  		}
 
 		/*
@@ -2665,6 +2777,10 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 
 		Bitmapset *actualUpdatedCols = rte->updatedCols;
 		Bitmapset *extraUpdatedCols = NULL;
+#ifdef YB_TODO
+		/* YB_TODO(neil)
+		 * Looking at ExecUpdatePrologue() and work on beforeRowUpdateTriggerFired.
+		 */
 		if (beforeRowUpdateTriggerFired)
 		{
 			/* trigger might have changed tuple */
@@ -2676,22 +2792,49 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 				actualUpdatedCols = extraUpdatedCols;
 			}
 		}
+<<<<<<< nodeModifyTable.c
+
+		Bitmapset *primary_key_bms = YBGetTablePrimaryKeyBms(resultRelationDesc);
+		bool is_pk_updated = bms_overlap(primary_key_bms, actualUpdatedCols);
+		bms_free(primary_key_bms);
+
+		/*
+		 * TODO(alex): It probably makes more sense to pass a
+		 *             transformed slot instead of a plan slot? Note though
+		 *             that it can have tuple materialized already.
+		 */
+
+		ModifyTable *plan = (ModifyTable *) mtstate->ps.plan;
+=======
+#endif
 		bool is_pk_updated =
 			bms_overlap(YBGetTablePrimaryKeyBms(resultRelationDesc), actualUpdatedCols);
 
+>>>>>>> nodeModifyTable.c
 		if (is_pk_updated)
 		{
-			YBCExecuteUpdateReplace(resultRelationDesc, planSlot, tuple, estate, mtstate);
+<<<<<<< nodeModifyTable.c
+			YBCExecuteUpdateReplace(resultRelationDesc, planSlot, tuple, estate);
+=======
+			YBCExecuteUpdateReplace(resultRelationDesc, context->planSlot, tuple, estate, mtstate);
+>>>>>>> nodeModifyTable.c
 			row_found = true;
 		}
 		else
 		{
 			row_found = YBCExecuteUpdate(resultRelationDesc,
-										 resultRelInfo,
+<<<<<<< nodeModifyTable.c
 										 planSlot,
+										 oldtuple,
+=======
+										 resultRelInfo,
+										 context->planSlot,
+>>>>>>> nodeModifyTable.c
 										 tuple,
 										 estate,
-										 mtstate,
+										 plan,
+										 mtstate->yb_fetch_target_tuple,
+										 estate->yb_es_is_single_row_modify_txn,
 										 actualUpdatedCols,
 										 canSetTag);
 		}
@@ -2706,11 +2849,22 @@ ExecUpdate(ModifyTableContext *context, ResultRelInfo *resultRelInfo,
 			return NULL;
 		}
 
+<<<<<<< nodeModifyTable.c
+		/*
+		 * Update indices selectively if necessary, updates w/o fetched target tuple
+		 * do not affect indices.
+		 */
+		if (YBCRelInfoHasSecondaryIndices(resultRelInfo) &&
+			mtstate->yb_fetch_target_tuple)
+		{
+			Datum	ybctid = YBCGetYBTupleIdFromSlot(planSlot);
+=======
 		/* Update indices selectively if necessary, Single row updates do not affect indices */
 		if (YBCRelInfoHasSecondaryIndices(resultRelInfo) &&
 		    !mtstate->yb_mt_is_single_row_update_or_delete)
 		{
-			Datum	ybctid = YBCGetYBTupleIdFromSlot(planSlot);
+			Datum	ybctid = YBCGetYBTupleIdFromSlot(context->planSlot);
+>>>>>>> nodeModifyTable.c
 			List *no_update_index_list = ((ModifyTable *)mtstate->ps.plan)->no_update_index_list;
 
 			/* Delete index entries of the old tuple */
@@ -2882,6 +3036,11 @@ redo_act:
 		}
 	}
 
+	YbPostProcessDml(CMD_UPDATE,
+					 resultRelationDesc,
+					 slot->tts_tupleDescriptor,
+					 tuple);
+
 	if (canSetTag)
 		(estate->es_processed)++;
 
@@ -2906,7 +3065,7 @@ redo_act:
 		 * differently, so junkFilter is not needed.
 		 */
 		if (IsYBRelation(resultRelationDesc) && resultRelInfo->ri_junkFilter)
-			slot = ExecFilterJunk(resultRelInfo->ri_junkFilter, planSlot);
+			slot = ExecFilterJunk(resultRelInfo->ri_junkFilter, context->planSlot);
 #endif
 		return ExecProcessReturning(resultRelInfo, slot, context->planSlot);
 	}
@@ -3099,8 +3258,8 @@ yb_skip_transaction_control_check:
 		 * - Pass slot to Yugabyte call once the API is fixed.
 		 */
 		bool shouldFree = true;
-		oldtuple = ExecFetchSlotHeapTuple(estate->yb_conflict_slot, true, &shouldFree);
-		TABLETUPLE_YBCTID(planSlot) = HEAPTUPLE_YBCTID(oldtuple);
+		oldtuple = ExecFetchSlotHeapTuple(context->estate->yb_conflict_slot, true, &shouldFree);
+		TABLETUPLE_YBCTID(context->planSlot) = HEAPTUPLE_YBCTID(oldtuple);
 	}
 
 	/*
@@ -3160,7 +3319,7 @@ yb_skip_transaction_control_check:
 	/* YB_TODO(neil) Postgres changes its function signature. Need fix while compiling */
 	*returning = ExecUpdate(mtstate, resultRelInfo, conflictTid, oldtuple,
 							resultRelInfo->ri_onConflict->oc_ProjSlot,
-							planSlot,
+							context->planSlot,
 							&mtstate->mt_epqstate, mtstate->ps.state,
 							canSetTag);
 #endif
@@ -4371,8 +4530,8 @@ ExecModifyTable(PlanState *pstate)
 								  node->canSetTag, NULL, NULL);
 
 				/* YB_TODO(neil) Fixed function signature
-				slot = ExecGetInsertNewTuple(resultRelInfo, planSlot);
-				slot = ExecInsert(node, resultRelInfo, slot, planSlot,
+				slot = ExecGetInsertNewTuple(resultRelInfo, context.planSlot);
+				slot = ExecInsert(node, resultRelInfo, slot, context.planSlot,
 								  estate, node->canSetTag);
 				*/
 
@@ -4543,6 +4702,19 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	mtstate->canSetTag = node->canSetTag;
 	mtstate->mt_done = false;
 
+<<<<<<< nodeModifyTable.c
+	mtstate->mt_plans = (PlanState **) palloc0(sizeof(PlanState *) * nplans);
+	mtstate->resultRelInfo = estate->es_result_relations + node->resultRelIndex;
+	mtstate->yb_fetch_target_tuple = !YbCanSkipFetchingTargetTupleForModifyTable(node);
+
+	/* If modifying a partitioned table, initialize the root table info */
+	if (node->rootResultRelIndex >= 0)
+		mtstate->rootResultRelInfo = estate->es_root_result_relations +
+			node->rootResultRelIndex;
+
+	mtstate->mt_arowmarks = (List **) palloc0(sizeof(List *) * nplans);
+	mtstate->mt_nplans = nplans;
+=======
 	mtstate->mt_nrels = nrels;
 	mtstate->resultRelInfo = (ResultRelInfo *)
 		palloc(nrels * sizeof(ResultRelInfo));
@@ -4579,6 +4751,7 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		ExecInitResultRelation(estate, mtstate->resultRelInfo,
 							   linitial_int(node->resultRelations));
 	}
+>>>>>>> nodeModifyTable.c
 
 	/* set up epqstate with dummy subplan data for the moment */
 	EvalPlanQualInit(&mtstate->mt_epqstate, estate, NULL, NIL, node->epqParam);
@@ -4655,6 +4828,17 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 															 eflags);
 		}
 
+<<<<<<< nodeModifyTable.c
+		resultRelInfo++;
+		i++;
+	}
+
+	estate->es_result_relation_info = saved_resultRelInfo;
+
+	/* Get the target relation */
+	resultRelInfo = getTargetResultRelInfo(mtstate);
+	rel = resultRelInfo->ri_RelationDesc;
+=======
 		/*
 		 * For UPDATE/DELETE/MERGE, find the appropriate junk attr now, either
 		 * a 'ctid' or 'wholerow' attribute depending on relkind.  For foreign
@@ -4728,6 +4912,7 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		if (operation == CMD_INSERT || operation == CMD_UPDATE || operation == CMD_MERGE)
 			ExecInitStoredGenerated(resultRelInfo, estate, operation);
 	}
+>>>>>>> nodeModifyTable.c
 
 	/*
 	 * If this is an inherited update/delete/merge, there will be a junk
@@ -4751,9 +4936,15 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	 * ExecCrossPartitionUpdate.
 	 */
 	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE &&
+<<<<<<< nodeModifyTable.c
+		(operation == CMD_INSERT || update_tuple_routing_needed))
+		mtstate->mt_partition_tuple_routing =
+			ExecSetupPartitionTupleRouting(mtstate, resultRelInfo);
+=======
 		operation == CMD_INSERT)
 		mtstate->mt_partition_tuple_routing =
 			ExecSetupPartitionTupleRouting(estate, rel);
+>>>>>>> nodeModifyTable.c
 
 	/*
 	 * Initialize any WITH CHECK OPTION constraints if needed.
@@ -4924,6 +5115,132 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 	EvalPlanQualSetPlan(&mtstate->mt_epqstate, subplan, arowmarks);
 
 	/*
+<<<<<<< nodeModifyTable.c
+	 * Initialize the junk filter(s) if needed.  INSERT queries need a filter
+	 * if there are any junk attrs in the tlist.  UPDATE and DELETE always
+	 * need a filter, since there's always at least one junk attribute present
+	 * --- no need to look first.  Typically, this will be a 'ctid' or
+	 * 'wholerow' attribute, but in the case of a foreign data wrapper it
+	 * might be a set of junk attributes sufficient to identify the remote
+	 * row.
+	 *
+	 * If there are multiple result relations, each one needs its own junk
+	 * filter.  Note multiple rels are only possible for UPDATE/DELETE, so we
+	 * can't be fooled by some needing a filter and some not.
+	 *
+	 * This section of code is also a convenient place to verify that the
+	 * output of an INSERT or UPDATE matches the target table(s).
+	 */
+	{
+		bool		junk_filter_needed = false;
+
+		switch (operation)
+		{
+			case CMD_INSERT:
+				foreach(l, subplan->targetlist)
+				{
+					TargetEntry *tle = (TargetEntry *) lfirst(l);
+
+					if (tle->resjunk)
+					{
+						junk_filter_needed = true;
+						break;
+					}
+				}
+				break;
+			case CMD_UPDATE:
+			case CMD_DELETE:
+				/*
+				 * If it's a YB UPDATE/DELETE that didn't fetch the target tuple,
+				 * there is no junk attribute to extract.
+				 */
+				if (IsYBRelation(mtstate->resultRelInfo->ri_RelationDesc))
+				{
+					junk_filter_needed = mtstate->yb_fetch_target_tuple;
+				}
+				else
+				{
+					junk_filter_needed = true;
+				}
+				break;
+			default:
+				elog(ERROR, "unknown operation");
+				break;
+		}
+
+		if (junk_filter_needed)
+		{
+			resultRelInfo = mtstate->resultRelInfo;
+			for (i = 0; i < nplans; i++)
+			{
+				JunkFilter *j;
+
+				subplan = mtstate->mt_plans[i]->plan;
+				if (operation == CMD_INSERT || operation == CMD_UPDATE)
+					ExecCheckPlanOutput(resultRelInfo->ri_RelationDesc,
+										subplan->targetlist);
+
+				j = ExecInitJunkFilter(subplan->targetlist,
+									   resultRelInfo->ri_RelationDesc->rd_att->tdhasoid,
+									   ExecInitExtraTupleSlot(estate, NULL));
+
+				if (operation == CMD_UPDATE || operation == CMD_DELETE)
+				{
+					/* For UPDATE/DELETE, find the appropriate junk attr now */
+					char		relkind;
+
+					relkind = resultRelInfo->ri_RelationDesc->rd_rel->relkind;
+					if (IsYBRelation(rel))
+					{
+						j->jf_junkAttNo = ExecFindJunkAttribute(j, "ybctid");
+						if (!AttributeNumberIsValid(j->jf_junkAttNo)) {
+							elog(ERROR, "could not find junk ybctid column");
+						}
+					}
+					else if (relkind == RELKIND_RELATION ||
+						relkind == RELKIND_MATVIEW ||
+						relkind == RELKIND_PARTITIONED_TABLE)
+					{
+						j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
+						if (!AttributeNumberIsValid(j->jf_junkAttNo))
+							elog(ERROR, "could not find junk ctid column");
+					}
+					else if (relkind == RELKIND_FOREIGN_TABLE)
+					{
+						/*
+						 * When there is a row-level trigger, there should be
+						 * a wholerow attribute.
+						 */
+						j->jf_junkAttNo = ExecFindJunkAttribute(j, "wholerow");
+					}
+					else
+					{
+						j->jf_junkAttNo = ExecFindJunkAttribute(j, "wholerow");
+						if (!AttributeNumberIsValid(j->jf_junkAttNo))
+							elog(ERROR, "could not find junk wholerow column");
+					}
+				}
+
+				resultRelInfo->ri_junkFilter = j;
+				resultRelInfo++;
+			}
+		}
+		else
+		{
+			if (operation == CMD_INSERT)
+				ExecCheckPlanOutput(mtstate->resultRelInfo->ri_RelationDesc,
+									subplan->targetlist);
+		}
+	}
+
+	/*
+	 * Set up a tuple table slot for use for trigger output tuples. In a plan
+	 * containing multiple ModifyTable nodes, all can share one such slot, so
+	 * we keep it in the estate.
+	 */
+	if (estate->es_trig_tuple_slot == NULL)
+		estate->es_trig_tuple_slot = ExecInitExtraTupleSlot(estate, NULL);
+=======
 	 * If there are a lot of result relations, use a hash table to speed the
 	 * lookups.  If there are not a lot, a simple linear search is faster.
 	 *
@@ -5010,6 +5327,7 @@ ExecInitModifyTable(ModifyTable *node, EState *estate, int eflags)
 		}
 	}
 #endif
+>>>>>>> nodeModifyTable.c
 
 	/*
 	 * Lastly, if this is not the primary (canSetTag) ModifyTable node, add it
@@ -5108,4 +5426,99 @@ ExecReScanModifyTable(ModifyTableState *node)
 	 * semantics of that would be a bit debatable anyway.
 	 */
 	elog(ERROR, "ExecReScanModifyTable is not implemented");
+}
+
+/*
+ * Should be called after INSERT/UPDATE/DELETE has been processed.
+ * For DELETE, both desc and newtup will be NULL.
+ */
+static void YbPostProcessDml(CmdType cmd_type,
+							 Relation rel,
+							 TupleDesc desc,
+							 HeapTuple newtup)
+{
+	if (!IsYBRelation(rel) || IsBootstrapProcessingMode())
+		return; /* Nothing to do*/
+
+	if (!YbIsSystemCatalogChange(rel))
+		return; /* We only care about system table changes here. */
+
+	/* This routine is for a very specific set of DMLs. */
+	Assert(cmd_type != CMD_INSERT ||
+		   cmd_type != CMD_UPDATE ||
+		   cmd_type != CMD_DELETE);
+
+	/*
+	 * TODO(alex, myang):
+	 *   Mark system catalogs as directly modified so that we know to increment
+	 *   catalog version. Handle shared table modification as well!
+	 */
+
+	/*
+	 * Update pinned objects cache if pg_depend/pg_shdepend was modified.
+	 */
+	bool is_shared_dep;
+
+	if (RelationGetRelid(rel) == DependRelationId)
+		is_shared_dep = false;
+	else if (RelationGetRelid(rel) == SharedDependRelationId)
+		is_shared_dep = true;
+	else
+		return; /* Nothing more to do */
+
+	if (cmd_type == CMD_INSERT)
+	{
+		YbHandlePossibleObjectPinning(desc, newtup, is_shared_dep);
+	}
+	else
+	{
+		/*
+		 * In YB, we do not fetch the deleted tuple content and thus we don't
+		 * know what exactly was deleted.
+		 * As a workaround, we invalidate the cache as a whole.
+		 * For simplicity, we do the same for UPDATE.
+		 */
+		 YbResetPinnedCache();
+	}
+}
+
+/*
+ * When inserting a new value into pg_depend or pg_shdepend, it should be reflected in the
+ * YB pinned object cache.
+ * This function takes care of that.
+ */
+static void
+YbHandlePossibleObjectPinning(TupleDesc desc,
+							  HeapTuple tuple,
+							  bool is_shared_dep)
+{
+	Assert(tuple != NULL);
+
+	int attnum_deptype = is_shared_dep ? Anum_pg_shdepend_deptype
+									   : Anum_pg_depend_deptype;
+	int attnum_refclassid = is_shared_dep ? Anum_pg_shdepend_refclassid
+										  : Anum_pg_depend_refclassid;
+	int attnum_refobjid = is_shared_dep ? Anum_pg_shdepend_refobjid
+										: Anum_pg_depend_refobjid;
+	char pin_deptype = is_shared_dep ? SHARED_DEPENDENCY_PIN
+									 : DEPENDENCY_PIN;
+
+	bool is_null; /* Can never really be null. */
+
+	char deptype = DatumGetChar(
+		heap_getattr(tuple, attnum_deptype, desc, &is_null));
+	Assert(!is_null);
+
+	if (deptype != pin_deptype)
+		return; /* Nothing to do here. */
+
+	Oid refclassid = DatumGetObjectId(
+		heap_getattr(tuple, attnum_refclassid, desc, &is_null));
+	Assert(!is_null);
+
+	Oid refobjid = DatumGetObjectId(
+		heap_getattr(tuple, attnum_refobjid, desc, &is_null));
+	Assert(!is_null);
+
+	YbPinObjectIfNeeded(refclassid, refobjid, is_shared_dep);
 }

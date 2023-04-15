@@ -134,6 +134,21 @@
  *----------
  */
 #ifdef HAVE__BUILTIN_CONSTANT_P
+<<<<<<< elog.h
+#define ereport_domain(elevel, domain, rest)	\
+	do { \
+		if (IsMultiThreadedMode()) \
+		{ \
+			if (yb_errstart(elevel, __FILE__, __LINE__, PG_FUNCNAME_MACRO)) \
+				yb_errfinish rest; \
+		} \
+		else \
+		{ \
+			if (errstart(elevel, __FILE__, __LINE__, PG_FUNCNAME_MACRO, \
+						 domain)) \
+				errfinish rest; \
+		} \
+=======
 #define ereport_domain(elevel, domain, ...)	\
 	do { \
 		pg_prevent_errno_in_scope(); \
@@ -144,6 +159,7 @@
 			errstart_cold(elevel, domain) : \
 			errstart(elevel, domain)) \
 			__VA_ARGS__, errfinish(__FILE__, __LINE__, PG_FUNCNAME_MACRO); \
+>>>>>>> elog.h
 		if (__builtin_constant_p(elevel) && (elevel) >= ERROR) \
 			pg_unreachable(); \
 	} while(0)
@@ -151,12 +167,26 @@
 #define ereport_domain(elevel, domain, ...)	\
 	do { \
 		const int elevel_ = (elevel); \
+<<<<<<< elog.h
+		if (IsMultiThreadedMode()) \
+		{ \
+			if (yb_errstart(elevel_, __FILE__, __LINE__, PG_FUNCNAME_MACRO)) \
+				yb_errfinish rest; \
+		} \
+		else \
+		{ \
+			if (errstart(elevel_, __FILE__, __LINE__, PG_FUNCNAME_MACRO, \
+						 domain)) \
+				errfinish rest; \
+		} \
+=======
 		pg_prevent_errno_in_scope(); \
 		if (IsMultiThreadedMode()) { \
 		   yb_pgbackend_ereport(elevel, NULL); \
 		} \		const int elevel_ = (elevel); \
 		if (errstart(elevel_, domain)) \
 			__VA_ARGS__, errfinish(__FILE__, __LINE__, PG_FUNCNAME_MACRO); \
+>>>>>>> elog.h
 		if (elevel_ >= ERROR) \
 			pg_unreachable(); \
 	} while(0)
@@ -167,11 +197,20 @@
 
 #define TEXTDOMAIN NULL
 
+<<<<<<< elog.h
+extern bool yb_errstart(int elevel, const char *filename, int lineno,
+		 const char *funcname);
+extern void yb_errfinish(int dummy,...);
+extern bool errstart(int elevel, const char *filename, int lineno,
+		 const char *funcname, const char *domain);
+extern void errfinish(int dummy,...);
+=======
 extern bool message_level_is_interesting(int elevel);
 
 extern bool errstart(int elevel, const char *domain);
 extern pg_attribute_cold bool errstart_cold(int elevel, const char *domain);
 extern void errfinish(const char *filename, int lineno, const char *funcname);
+>>>>>>> elog.h
 
 extern int	errcode(int sqlerrcode);
 extern int	yb_txn_errcode(uint16_t txn_errcode);
@@ -180,6 +219,8 @@ extern int	errcode_for_file_access(void);
 extern int	errcode_for_socket_access(void);
 
 extern int	errmsg(const char *fmt,...) pg_attribute_printf(1, 2);
+extern int	yb_errmsg_from_status_data(const char *fmt, const size_t nargs, const char** args);
+extern int	yb_detail_from_status_data(const char *fmt, const size_t nargs, const char** args);
 extern int	errmsg_internal(const char *fmt,...) pg_attribute_printf(1, 2);
 
 extern int	errmsg_plural(const char *fmt_singular, const char *fmt_plural,
@@ -232,17 +273,66 @@ extern int	geterrcode(void);
 extern int	geterrposition(void);
 extern int	getinternalerrposition(void);
 
-void yb_pgbackend_ereport(int elevel, const char *fmt,...);
-
-void yb_pgbackend_ereport_dummy(int dummy,...);
-
 /*----------
  * Old-style error reporting API: to be used in this way:
  *		elog(ERROR, "portal \"%s\" not found", stmt->portalname);
  *----------
  */
+<<<<<<< elog.h
+#ifdef HAVE__VA_ARGS
+/*
+ * If we have variadic macros, we can give the compiler a hint about the
+ * call not returning when elevel >= ERROR.  See comments for ereport().
+ * Note that historically elog() has called elog_start (which saves errno)
+ * before evaluating "elevel", so we preserve that behavior here.
+ */
+#ifdef HAVE__BUILTIN_CONSTANT_P
+#define elog(elevel, ...)  \
+	do { \
+		if (IsMultiThreadedMode()) \
+		{ \
+			if (yb_errstart(elevel, __FILE__, __LINE__, PG_FUNCNAME_MACRO)) \
+				yb_errfinish(errmsg(__VA_ARGS__)); \
+		} \
+		else \
+		{ \
+			elog_start(__FILE__, __LINE__, PG_FUNCNAME_MACRO); \
+			elog_finish(elevel, __VA_ARGS__); \
+		} \
+		if (__builtin_constant_p(elevel) && (elevel) >= ERROR) \
+			pg_unreachable(); \
+	} while(0)
+#else							/* !HAVE__BUILTIN_CONSTANT_P */
+#define elog(elevel, ...)  \
+	do { \
+		const int elevel_ = (elevel); \
+		if (IsMultiThreadedMode()) \
+		{ \
+			if (yb_errstart(elevel_, __FILE__, __LINE__, PG_FUNCNAME_MACRO)) \
+				yb_errfinish(errmsg(__VA_ARGS__)); \
+		} \
+		else \
+		{ \
+			elog_start(__FILE__, __LINE__, PG_FUNCNAME_MACRO); \
+			elog_finish(elevel_, __VA_ARGS__); \
+		} \
+		if (elevel_ >= ERROR) \
+			pg_unreachable(); \
+	} while(0)
+#endif							/* HAVE__BUILTIN_CONSTANT_P */
+#else							/* !HAVE__VA_ARGS */
+#define elog  \
+	elog_start(__FILE__, __LINE__, PG_FUNCNAME_MACRO), \
+	elog_finish
+#endif							/* HAVE__VA_ARGS */
+
+extern void elog_start(const char *filename, int lineno, const char *funcname);
+extern void elog_finish(int elevel, const char *fmt,...) pg_attribute_printf(2, 3);
+
+=======
 #define elog(elevel, ...)  \
 	ereport(elevel, errmsg_internal(__VA_ARGS__))
+>>>>>>> elog.h
 
 /* Support for constructing error strings separately from ereport() calls */
 
@@ -323,6 +413,14 @@ extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
  */
 #define PG_TRY()  \
 	do { \
+<<<<<<< elog.h
+		sigjmp_buf *save_exception_stack = yb_get_exception_stack(); \
+		ErrorContextCallback *save_context_stack = error_context_stack; \
+		sigjmp_buf local_sigjmp_buf; \
+		if (sigsetjmp(local_sigjmp_buf, 0) == 0) \
+		{ \
+			yb_set_exception_stack(&local_sigjmp_buf)
+=======
 		sigjmp_buf *_save_exception_stack = PG_exception_stack; \
 		ErrorContextCallback *_save_context_stack = error_context_stack; \
 		sigjmp_buf _local_sigjmp_buf; \
@@ -330,11 +428,17 @@ extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
 		if (sigsetjmp(_local_sigjmp_buf, 0) == 0) \
 		{ \
 			PG_exception_stack = &_local_sigjmp_buf
+>>>>>>> elog.h
 
 #define PG_CATCH()	\
 		} \
 		else \
 		{ \
+<<<<<<< elog.h
+			yb_set_exception_stack(save_exception_stack); \
+			error_context_stack = save_context_stack
+
+=======
 			PG_exception_stack = _save_exception_stack; \
 			error_context_stack = _save_context_stack
 
@@ -346,12 +450,19 @@ extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
 			PG_exception_stack = _save_exception_stack; \
 			error_context_stack = _save_context_stack
 
+>>>>>>> elog.h
 #define PG_END_TRY()  \
 		} \
+<<<<<<< elog.h
+		yb_reset_error_status(); \
+		yb_set_exception_stack(save_exception_stack); \
+		error_context_stack = save_context_stack; \
+=======
 		if (_do_rethrow) \
 				PG_RE_THROW(); \
 		PG_exception_stack = _save_exception_stack; \
 		error_context_stack = _save_context_stack; \
+>>>>>>> elog.h
 	} while (0)
 
 /*
@@ -414,6 +525,9 @@ typedef struct ErrorData
 	struct MemoryContextData *assoc_context;
 } ErrorData;
 
+extern sigjmp_buf *yb_get_exception_stack(void);
+extern void yb_set_exception_stack(sigjmp_buf *new_sigjmp_buf);
+extern void yb_reset_error_status(void);
 extern void EmitErrorReport(void);
 extern ErrorData *CopyErrorData(void);
 extern void FreeErrorData(ErrorData *edata);

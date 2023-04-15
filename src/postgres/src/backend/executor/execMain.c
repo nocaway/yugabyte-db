@@ -104,7 +104,6 @@ static char *ExecBuildSlotValueDescription(Relation rel,
 										   Bitmapset *modifiedCols,
 										   int maxfieldlen);
 static void EvalPlanQualStart(EPQState *epqstate, Plan *planTree);
-
 /* end of local decls */
 
 
@@ -1261,6 +1260,25 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 	resultRelInfo->ri_notMatchedMergeAction = NIL;
 
 	/*
+<<<<<<< execMain.c
+	 * Partition constraint, which also includes the partition constraint of
+	 * all the ancestors that are partitions.  Note that it will be checked
+	 * even in the case of tuple-routing where this table is the target leaf
+	 * partition, if there any BR triggers defined on the table.  Although
+	 * tuple-routing implicitly preserves the partition constraint of the
+	 * target partition for a given row, the BR triggers may change the row
+	 * such that the constraint is no longer satisfied, which we must fail for
+	 * by checking it explicitly.
+	 *
+	 * If this is a partitioned table, the partition constraint (if any) of a
+	 * given row will be checked just before performing tuple-routing.
+	 */
+	partition_check = RelationGetPartitionQual(resultRelationDesc);
+
+	resultRelInfo->ri_PartitionCheck = partition_check;
+	resultRelInfo->ri_RootResultRelInfo = partition_root_rri;
+	resultRelInfo->ri_PartitionReadyForRouting = false;
+=======
 	 * Only ExecInitPartitionInfo() and ExecInitPartitionDispatchInfo() pass
 	 * non-NULL partition_root_rri.  For child relations that are part of the
 	 * initial query rather than being dynamically added by tuple routing,
@@ -1273,6 +1291,7 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 	resultRelInfo->ri_ChildToRootMap = NULL;
 	resultRelInfo->ri_ChildToRootMapValid = false;
 	resultRelInfo->ri_CopyMultiInsertBuffer = NULL;
+>>>>>>> execMain.c
 }
 
 /*
@@ -1848,8 +1867,15 @@ ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 							TupleTableSlot *slot,
 							EState *estate)
 {
+<<<<<<< execMain.c
+	Relation 	root_rel;
+	Relation	rel = resultRelInfo->ri_RelationDesc;
+	Relation	orig_rel = rel;
+	TupleDesc	tupdesc = RelationGetDescr(rel);
+=======
 	Relation	rel;
 	TupleDesc	tupdesc;
+>>>>>>> execMain.c
 	char	   *val_desc;
 	Bitmapset  *modifiedCols;
 
@@ -1863,9 +1889,15 @@ ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 	{
 		ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
 		TupleDesc	old_tupdesc;
+<<<<<<< execMain.c
+		AttrNumber *map;
+
+		root_rel = rootrel->ri_RelationDesc;
+=======
 		AttrMap    *map;
 
 		rel = rootrel->ri_RelationDesc;
+>>>>>>> execMain.c
 		tupdesc = RelationGetDescr(rootrel->ri_RelationDesc);
 
 		old_tupdesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
@@ -1884,13 +1916,17 @@ ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 	}
 	else
 	{
+<<<<<<< execMain.c
+		root_rel = resultRelInfo->ri_RelationDesc;
+=======
 		rel = resultRelInfo->ri_RelationDesc;
+>>>>>>> execMain.c
 		tupdesc = RelationGetDescr(resultRelInfo->ri_RelationDesc);
 		modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
 								 ExecGetUpdatedCols(resultRelInfo, estate));
 	}
 
-	val_desc = ExecBuildSlotValueDescription(rel,
+	val_desc = ExecBuildSlotValueDescription(root_rel,
 											 slot,
 											 tupdesc,
 											 modifiedCols,
@@ -1924,13 +1960,22 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 	TupleDesc	tupdesc = RelationGetDescr(rel);
 	TupleConstr *constr = tupdesc->constr;
 	Bitmapset  *modifiedCols;
+<<<<<<< execMain.c
+=======
 	Assert(constr);				/* we should not be called otherwise */
+>>>>>>> execMain.c
 
+<<<<<<< execMain.c
+	Assert(constr || resultRelInfo->ri_PartitionCheck);
+
+	if (constr && constr->has_not_null)
+=======
 	/* YB_TODO(neil@yugabyte) Postgres change rewriter for modified columns.  Look into it */
 	modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
 							 ExecGetUpdatedCols(resultRelInfo, estate));
 
 	if (constr->has_not_null)
+>>>>>>> execMain.c
 	{
 		int			natts = tupdesc->natts;
 		int			attrChk;
@@ -1939,14 +1984,35 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 		{
 			Form_pg_attribute att = TupleDescAttr(tupdesc, attrChk - 1);
 
-			if (mtstate && mtstate->yb_mt_is_single_row_update_or_delete &&
-			    !bms_is_member(att->attnum - YBGetFirstLowInvalidAttributeNumber(rel), modifiedCols))
+			/*
+			 * Below we check if attribute belongs to the modified columns for
+			 * the NOT NULL constraint and if so, performs single-row updates.
+			 * Thus modified columns must be calculated beforehand.
+			 */
+			if (resultRelInfo->ri_RootResultRelInfo)
+			{
+				ResultRelInfo *rootrel = resultRelInfo->ri_RootResultRelInfo;
+				modifiedCols = bms_union(ExecGetInsertedCols(rootrel, estate),
+										 ExecGetUpdatedCols(rootrel, estate));
+			}
+			else
+			{
+				modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
+										 ExecGetUpdatedCols(resultRelInfo, estate));
+			}
+
+			bool att_in_modified_cols = bms_is_member(
+				att->attnum - YBGetFirstLowInvalidAttributeNumber(rel),
+				modifiedCols);
+
+			if (mtstate && !mtstate->yb_fetch_target_tuple && !att_in_modified_cols)
 			{
 				/*
-				 * For single-row-updates, we only know the values of the
+				 * Without a target tuple, we only know the values of the
 				 * modified columns. But in this case it is safe to skip the
 				 * unmodified columns anyway.
 				 */
+				bms_free(modifiedCols);
 				continue;
 			}
 
@@ -2001,6 +2067,7 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 						 val_desc ? errdetail("Failing row contains %s.", val_desc) : 0,
 						 errtablecol(orig_rel, attrChk)));
 			}
+			bms_free(modifiedCols);
 		}
 	}
 
@@ -2039,6 +2106,10 @@ ExecConstraints(ResultRelInfo *resultRelInfo,
 			else
 				modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
 										 ExecGetUpdatedCols(resultRelInfo, estate));
+<<<<<<< execMain.c
+
+=======
+>>>>>>> execMain.c
 			val_desc = ExecBuildSlotValueDescription(rel,
 													 slot,
 													 tupdesc,
@@ -2147,12 +2218,15 @@ ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 					else
 						modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
 												 ExecGetUpdatedCols(resultRelInfo, estate));
+<<<<<<< execMain.c
+=======
 
 					/* YB_TODO(neil@yugabyte)
 					 * Postgres change rewriter for modified columns. Look into it.
 					 */
 					modifiedCols = bms_union(ExecGetInsertedCols(resultRelInfo, estate),
 											 ExecGetUpdatedCols(resultRelInfo, estate));
+>>>>>>> execMain.c
 					val_desc = ExecBuildSlotValueDescription(rel,
 															 slot,
 															 tupdesc,
@@ -2246,7 +2320,7 @@ ExecBuildSlotValueDescription(Relation rel,
 	AclResult	aclresult;
 	bool		table_perm = false;
 	bool		any_perm = false;
-	Oid 		reloid = RelationGetRelid(rel);
+	Oid     reloid = RelationGetRelid(rel);
 
 	/*
 	 * Check if RLS is enabled and should be active for the relation; if so,
@@ -2380,7 +2454,11 @@ ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo)
 	 * been modified, then we can use a weaker lock, allowing for better
 	 * concurrency.
 	 */
+<<<<<<< execMain.c
+	updatedCols = ExecGetUpdatedCols(relinfo, estate);
+=======
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
+>>>>>>> execMain.c
 	keyCols = RelationGetIndexAttrBitmap(relinfo->ri_RelationDesc,
 										 INDEX_ATTR_BITMAP_KEY);
 

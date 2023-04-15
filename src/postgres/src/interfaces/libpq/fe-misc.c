@@ -32,6 +32,7 @@
 
 #include <signal.h>
 #include <time.h>
+#include <stdatomic.h>
 
 #ifdef WIN32
 #include "win32.h"
@@ -1230,6 +1231,11 @@ PQenv2encoding(void)
 #ifdef ENABLE_NLS
 
 static void
+<<<<<<< fe-misc.c
+libpq_binddomain()
+{
+	static atomic_bool already_bound = false;
+=======
 libpq_binddomain(void)
 {
 	/*
@@ -1240,6 +1246,7 @@ libpq_binddomain(void)
 	 * to be sure the compiler doesn't try to get cute.
 	 */
 	static volatile bool already_bound = false;
+>>>>>>> fe-misc.c
 
 	if (!already_bound)
 	{

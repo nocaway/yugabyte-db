@@ -20,8 +20,7 @@
  *--------------------------------------------------------------------------------------------------
  */
 
-#ifndef YB_SCAN_H
-#define YB_SCAN_H
+#pragma once
 
 #include "postgres.h"
 
@@ -99,7 +98,29 @@ typedef struct YbScanDescData
 	/* Secondary index used in this scan. */
 	Relation index;
 
+<<<<<<< yb_scan.h
+	/*
+	 * In YB ScanKey could be one of two types:
+	 *  - key for regular column
+	 *  - key which represents the yb_hash_code function.
+	 * The keys array holds keys of both types.
+	 * All regular keys go before keys for yb_hash_code.
+	 * Keys in range [0, nkeys) are regular keys.
+	 * Keys in range [nkeys, nkeys + nhash_keys) are keys for yb_hash_code
+	 * Such separation allows to process regular and non-regular keys independently.
+	 */
+	ScanKey keys[YB_MAX_SCAN_KEYS];
+	/* number of regular keys */
+	int nkeys;
+	/* number of keys which represents the yb_hash_code function */
+	int nhash_keys;
+
+	/* True if all the conditions for this index were bound to pggate. */
+	bool is_full_cond_bound;
+
+=======
 	/* Destination for queried data from Yugabyte database */
+>>>>>>> yb_scan.h
 	TupleDesc target_desc;
 	AttrNumber target_key_attnums[YB_MAX_SCAN_KEYS];
 
@@ -260,5 +281,3 @@ bool ybSampleNextBlock(YbSample ybSample);
 int ybFetchSample(YbSample ybSample, HeapTuple *rows);
 TupleTableSlot *ybFetchNext(YBCPgStatement handle,
 			TupleTableSlot *slot, Oid relid);
-
-#endif							/* YB_SCAN_H */

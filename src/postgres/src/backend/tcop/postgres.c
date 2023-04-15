@@ -1,4 +1,4 @@
- /*-------------------------------------------------------------------------
+/*-------------------------------------------------------------------------
  *
  * postgres.c
  *	  POSTGRES C Backend Interface
@@ -2420,13 +2420,22 @@ check_log_duration(char *msec_str, bool was_logged)
 
 		/*
 		 * Do not log if log_statement_sample_rate = 0. Log a sample if
+<<<<<<< postgres.c
+		 * log_statement_sample_rate <= 1 and avoid unecessary random() call
+		 * if log_statement_sample_rate = 1.
+=======
 		 * log_statement_sample_rate <= 1 and avoid unnecessary PRNG call if
 		 * log_statement_sample_rate = 1.
+>>>>>>> postgres.c
 		 */
 		if (exceeded_sample_duration)
 			in_sample = log_statement_sample_rate != 0 &&
 				(log_statement_sample_rate == 1 ||
+<<<<<<< postgres.c
+				 random() <= log_statement_sample_rate * MAX_RANDOM_VALUE);
+=======
 				 pg_prng_double(&pg_global_prng_state) <= log_statement_sample_rate);
+>>>>>>> postgres.c
 
 		if (exceeded_duration || in_sample || log_duration || xact_is_sampled)
 		{
@@ -2911,6 +2920,23 @@ quickdie(SIGNAL_ARGS)
 	 * wrong, so there's not much to lose.  Assuming the postmaster is still
 	 * running, it will SIGKILL us soon if we get stuck for some reason.
 	 *
+<<<<<<< postgres.c
+	 * Ideally this should be ereport(FATAL), but then we'd not get control
+	 * back...
+	 */
+
+#ifndef THREAD_SANITIZER
+	ereport(WARNING,
+			(errcode(ERRCODE_CRASH_SHUTDOWN),
+			 errmsg("terminating connection because of crash of another server process"),
+			 errdetail("The postmaster has commanded this server process to roll back"
+					   " the current transaction and exit, because another"
+					   " server process exited abnormally and possibly corrupted"
+					   " shared memory."),
+			 errhint("In a moment you should be able to reconnect to the"
+					 " database and repeat your command.")));
+#endif
+=======
 	 * One thing we can do to make this a tad safer is to clear the error
 	 * context stack, so that context callbacks are not called.  That's a lot
 	 * less code that could be reached here, and the context info is unlikely
@@ -2957,6 +2983,7 @@ quickdie(SIGNAL_ARGS)
 	if (IsYugaByteEnabled()) {
 		YBOnPostgresBackendShutdown();
 	}
+>>>>>>> postgres.c
 
 	/*
 	 * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
@@ -2991,12 +3018,17 @@ die(SIGNAL_ARGS)
 		ProcDiePending = true;
 	}
 
+<<<<<<< postgres.c
+	if (IsYugaByteEnabled())
+		YBCInterruptPgGate();
+=======
 	if (IsYugaByteEnabled()) {
 		YBCInterruptPgGate();
 	}
 
 	/* for the cumulative stats system */
 	pgStatSessionEndCause = DISCONNECT_KILLED;
+>>>>>>> postgres.c
 
 	/* If we're still here, waken anything waiting on the process latch */
 	SetLatch(MyLatch);
@@ -3510,6 +3542,16 @@ set_stack_base(void)
 	old = stack_base_ptr;
 #endif
 
+<<<<<<< postgres.c
+	/* Set up reference point for stack depth checking */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+#endif
+	stack_base_ptr = &stack_base;
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
+#pragma GCC diagnostic pop
+=======
 	/*
 	 * Set up reference point for stack depth checking.  On recent gcc we use
 	 * __builtin_frame_address() to avoid a warning about storing a local
@@ -3519,6 +3561,7 @@ set_stack_base(void)
 	stack_base_ptr = __builtin_frame_address(0);
 #else
 	stack_base_ptr = &stack_base;
+>>>>>>> postgres.c
 #endif
 #if defined(__ia64__) || defined(__ia64)
 	register_stack_base_ptr = ia64_get_bsp();
@@ -4007,39 +4050,19 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 #endif
 }
 
-static uint64_t
-YbPreloadRelCacheHelper()
-{
-	uint64_t catalog_version = YB_CATCACHE_VERSION_UNINITIALIZED;
-	YBCPgResetCatalogReadTime();
-	YBCStartSysTablePrefetching();
-	PG_TRY();
-	{
-		YbTryRegisterCatalogVersionTableForPrefetching();
-		YBPreloadRelCache();
-		catalog_version = YbGetMasterCatalogVersion();
-	}
-	PG_CATCH();
-	{
-		YBCStopSysTablePrefetching();
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-	YBCStopSysTablePrefetching();
-	return catalog_version;
-}
-
 /*
  * Reload the postgres caches and update the cache version.
  * Note: if catalog changes sneaked in since getting the
  * version it is unfortunate but ok. The master version will have
  * changed too (making our version number obsolete) so we will just end
  * up needing to do another cache refresh later.
- * See the comment for yb_catalog_cache_version in 'pg_yb_utils.c' for
+ * See the comment for yb_catalog_cache_version in 'pg_yb_utils.h' for
  * more details.
  */
 static void YBRefreshCache()
 {
+	Assert(OidIsValid(MyDatabaseId));
+
 	/*
 	 * Check that we are not already inside a transaction or we might end up
 	 * leaking cache references for any open relations (i.e. relations in-use by
@@ -4073,18 +4096,13 @@ static void YBRefreshCache()
 	/* Clear and reload system catalog caches, including all callbacks. */
 	ResetCatalogCaches();
 	CallSystemCacheCallbacks();
-	const uint64_t catalog_master_version = YbPreloadRelCacheHelper();
+
+	YBPreloadRelCache();
 
 	/* Also invalidate the pggate cache. */
 	HandleYBStatus(YBCPgInvalidateCache());
 
-	/* Set the new ysql cache version. */
-	yb_catalog_cache_version = catalog_master_version;
 	yb_need_cache_refresh = false;
-	if (*YBCGetGFlags()->log_ysql_catalog_versions)
-		ereport(LOG,
-				(errmsg("%s: set local catalog version: %" PRIu64,
-						__func__, yb_catalog_cache_version)));
 
 	finish_xact_command();
 }
@@ -4131,7 +4149,11 @@ static void YBPrepareCacheRefreshIfNeeded(ErrorData *edata, bool consider_retry,
 	 */
 	YBCPgResetCatalogReadTime();
 	const uint64_t catalog_master_version = YbGetMasterCatalogVersion();
-	const bool need_global_cache_refresh = yb_catalog_cache_version != catalog_master_version;
+	bool need_global_cache_refresh = false;
+	if (YbGetCatalogCacheVersion() != catalog_master_version) {
+		need_global_cache_refresh = true;
+		YbUpdateLastKnownCatalogCacheVersion(catalog_master_version);
+	}
 	if (*YBCGetGFlags()->log_ysql_catalog_versions)
 	{
 		int elevel = need_global_cache_refresh ? LOG : DEBUG1;
@@ -4353,14 +4375,9 @@ static void YBCheckSharedCatalogCacheVersion() {
 	if (YBCIsInitDbModeEnvVarSet())
 		return;
 
-	uint64_t shared_catalog_version;
-	if (YBIsDBCatalogVersionMode())
-		HandleYBStatus(YBCGetSharedDBCatalogVersion(yb_my_database_id_shm_index,
-													&shared_catalog_version));
-	else
-		HandleYBStatus(YBCGetSharedCatalogVersion(&shared_catalog_version));
+	const uint64_t shared_catalog_version = YbGetSharedCatalogVersion();
 	const bool need_global_cache_refresh =
-		yb_catalog_cache_version < shared_catalog_version;
+		YbGetCatalogCacheVersion() < shared_catalog_version;
 	if (*YBCGetGFlags()->log_ysql_catalog_versions)
 	{
 		int elevel = need_global_cache_refresh ? LOG : DEBUG1;
@@ -4370,6 +4387,7 @@ static void YBCheckSharedCatalogCacheVersion() {
 	}
 	if (need_global_cache_refresh)
 	{
+		YbUpdateLastKnownCatalogCacheVersion(shared_catalog_version);
 		YBRefreshCache();
 	}
 }
@@ -4664,6 +4682,8 @@ yb_restart_portal(const char* portal_name)
 	if (portal->holdContext)
 		MemoryContextDelete(portal->holdContext);
 
+	/* the portal run context might not have been reset, so do it now */
+	MemoryContextReset(portal->ybRunContext);
 
 	/* -------------------------------------------------------------------------
 	 * YB NOTE:
@@ -4723,6 +4743,23 @@ yb_get_sleep_usecs_on_txn_conflict(int attempt) {
 	return (long) (PowerWithUpperLimit(RetryBackoffMultiplier, attempt,
 				1.0 * RetryMaxBackoffMsecs / RetryMinBackoffMsecs) *
 			RetryMinBackoffMsecs * 1000);
+}
+
+static void yb_maybe_sleep_on_txn_conflict(int attempt)
+{
+	if (!YBIsWaitQueueEnabled())
+	{
+		/*
+		 * If transactions are leveraging the wait queue based infrastructure for
+		 * blocking semantics on conflicts, they need not sleep with exponential
+		 * backoff between retries. The wait queues ensure that the transaction's
+		 * read/ write rpc which faced a kConflict error is unblocked only when all
+		 * conflicting transactions have ended (either committed or aborted).
+		 */
+		pgstat_report_wait_start(WAIT_EVENT_YB_TXN_CONFLICT_BACKOFF);
+		pg_usleep(yb_get_sleep_usecs_on_txn_conflict(attempt));
+		pgstat_report_wait_end();
+	}
 }
 
 /*
@@ -4823,7 +4860,7 @@ yb_attempt_to_restart_on_error(int attempt,
 			else if (YBCIsTxnConflictError(edata->yb_txn_errcode))
 			{
 				HandleYBStatus(YBCPgResetTransactionReadPoint());
-				pg_usleep(yb_get_sleep_usecs_on_txn_conflict(attempt));
+				yb_maybe_sleep_on_txn_conflict(attempt);
 			}
 			else
 			{
@@ -4852,7 +4889,7 @@ yb_attempt_to_restart_on_error(int attempt,
 
 			if (YBCIsRestartReadError(edata->yb_txn_errcode))
 			{
-				YBCRestartTransaction(false /* force_restart */);
+				YBCRestartTransaction();
 			}
 			else if (YBCIsTxnConflictError(edata->yb_txn_errcode))
 			{
@@ -4862,7 +4899,7 @@ yb_attempt_to_restart_on_error(int attempt,
 				 * the same priority.
 				 */
 				YBCRecreateTransaction();
-				pg_usleep(yb_get_sleep_usecs_on_txn_conflict(attempt));
+				yb_maybe_sleep_on_txn_conflict(attempt);
 			}
 			else
 			{
@@ -5542,6 +5579,11 @@ PostgresMain(const char *dbname, const char *username)
 				set_ps_display("idle");
 				pgstat_report_activity(STATE_IDLE, NULL);
 
+<<<<<<< postgres.c
+				if (IsYugaByteEnabled())
+					yb_pgstat_set_has_catalog_version(false);
+			}
+=======
 				/* Start the idle-session timer */
 				if (IdleSessionTimeout > 0)
 				{
@@ -5553,6 +5595,7 @@ PostgresMain(const char *dbname, const char *username)
 
 			/* Report any recently-changed GUC options */
 			ReportChangedGUCOptions();
+>>>>>>> postgres.c
 
 			ReadyForQuery(whereToSendOutput);
 			send_ready_for_query = false;
@@ -5619,9 +5662,15 @@ PostgresMain(const char *dbname, const char *username)
 		if (ignore_till_sync && firstchar != EOF)
 			continue;
 
-		if (IsYugaByteEnabled()) {
+		if (IsYugaByteEnabled())
+		{
+			yb_pgstat_set_has_catalog_version(true);
 			YBCPgResetCatalogReadTime();
 			YBCheckSharedCatalogCacheVersion();
+			yb_run_with_explain_analyze = false;
+			if (IsYsqlUpgrade &&
+				yb_catalog_version_type != CATALOG_VERSION_CATALOG_TABLE)
+				yb_catalog_version_type = CATALOG_VERSION_UNSET;
 		}
 
 		switch (firstchar)

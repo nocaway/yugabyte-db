@@ -268,6 +268,60 @@ static YbBatchedNestLoop *make_YbBatchedNestLoop(List *tlist,
 			  List *joinclauses, List *otherclauses, List *nestParams,
 			  Plan *lefttree, Plan *righttree,
 			  JoinType jointype, bool inner_unique,
+<<<<<<< createplan.c
+			  size_t num_hashClauseInfos,
+			  YbBNLHashClauseInfo *hashClauseInfos);
+static HashJoin *make_hashjoin(List *tlist,
+			  List *joinclauses, List *otherclauses,
+			  List *hashclauses,
+			  Plan *lefttree, Plan *righttree,
+			  JoinType jointype, bool inner_unique);
+static Hash *make_hash(Plan *lefttree,
+		  Oid skewTable,
+		  AttrNumber skewColumn,
+		  bool skewInherit);
+static MergeJoin *make_mergejoin(List *tlist,
+			   List *joinclauses, List *otherclauses,
+			   List *mergeclauses,
+			   Oid *mergefamilies,
+			   Oid *mergecollations,
+			   int *mergestrategies,
+			   bool *mergenullsfirst,
+			   Plan *lefttree, Plan *righttree,
+			   JoinType jointype, bool inner_unique,
+			   bool skip_mark_restore);
+static Sort *make_sort(Plan *lefttree, int numCols,
+		  AttrNumber *sortColIdx, Oid *sortOperators,
+		  Oid *collations, bool *nullsFirst);
+static Plan *prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
+						   Relids relids,
+						   const AttrNumber *reqColIdx,
+						   bool adjust_tlist_in_place,
+						   int *p_numsortkeys,
+						   AttrNumber **p_sortColIdx,
+						   Oid **p_sortOperators,
+						   Oid **p_collations,
+						   bool **p_nullsFirst);
+static EquivalenceMember *find_ec_member_for_tle(EquivalenceClass *ec,
+					   TargetEntry *tle,
+					   Relids relids);
+static Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
+						Relids relids);
+static Sort *make_sort_from_groupcols(List *groupcls,
+						 AttrNumber *grpColIdx,
+						 Plan *lefttree);
+static Material *make_material(Plan *lefttree);
+static WindowAgg *make_windowagg(List *tlist, Index winref,
+			   int partNumCols, AttrNumber *partColIdx, Oid *partOperators,
+			   int ordNumCols, AttrNumber *ordColIdx, Oid *ordOperators,
+			   int frameOptions, Node *startOffset, Node *endOffset,
+			   Oid startInRangeFunc, Oid endInRangeFunc,
+			   Oid inRangeColl, bool inRangeAsc, bool inRangeNullsFirst,
+			   Plan *lefttree);
+static Group *make_group(List *tlist, List *qual, int numGroupCols,
+		   AttrNumber *grpColIdx, Oid *grpOperators,
+		   Plan *lefttree);
+=======
 			  List *hashOps);
 static HashJoin *make_hashjoin(List *tlist,
 							   List *joinclauses, List *otherclauses,
@@ -330,6 +384,7 @@ static WindowAgg *make_windowagg(List *tlist, Index winref,
 static Group *make_group(List *tlist, List *qual, int numGroupCols,
 						 AttrNumber *grpColIdx, Oid *grpOperators, Oid *grpCollations,
 						 Plan *lefttree);
+>>>>>>> createplan.c
 static Unique *make_unique_from_sortclauses(Plan *lefttree, List *distinctList);
 static Unique *make_unique_from_pathkeys(Plan *lefttree,
 										 List *pathkeys, int numCols);
@@ -2853,7 +2908,6 @@ static TargetEntry *make_dummy_tle(AttrNumber attr_num, bool is_null)
 
 	return dummy_tle;
 }
-#endif
 
 static bool has_applicable_indices(Relation relation,
                                    Bitmapset *updated_attrs,
@@ -2962,6 +3016,7 @@ static bool has_applicable_triggers(Relation rel, CmdType operation, Bitmapset *
 	// on non-updated attributes then it is safe skip triggers.
 	return false;
 }
+#endif
 
 /*
  * yb_single_row_update_or_delete_path
@@ -3039,6 +3094,8 @@ yb_single_row_update_or_delete_path(PlannerInfo *root,
 	AttrNumber attr_offset;
 	Bitmapset *update_attrs = NULL;
 	Bitmapset *pushdown_update_attrs = NULL;
+	/* Delay bailout because of not pushable expressions to analyze indexes. */
+	bool has_unpushable_exprs = false;
 
 	/* Verify YB is enabled. */
 	if (!IsYugaByteEnabled())
@@ -3232,16 +3289,18 @@ yb_single_row_update_or_delete_path(PlannerInfo *root,
 			 * elements not supported by DocDB, or expression pushdown is
 			 * disabled.
 			 *
-			 * However, if not pushable expression does not refer any target
-			 * table column, the Result node can evaluate it, and the statement
-			 * would still be one row.
+			 * If expression is not pushable, we can not do single line update,
+			 * but do not bail out until after we analyse indexes and make a
+			 * list of secondary indexes unaffected by the update. We can skip
+			 * update of those indexes regardless. Still allow to bail out
+			 * if there are triggers. There is no easy way to tell what columns
+			 * are affected by a trigger, so we should update all indexes.
 			 */
 			if (TupleDescAttr(tupDesc, resno - 1)->attnotnull ||
 				YBIsCollationValidNonC(ybc_get_attcollation(tupDesc, resno)) ||
 				!YbCanPushdownExpr(tle->expr, &colrefs))
 			{
-				RelationClose(relation);
-				return false;
+				has_unpushable_exprs = true;
 			}
 
 			pushdown_update_attrs = bms_add_member(pushdown_update_attrs,
@@ -3266,6 +3325,17 @@ yb_single_row_update_or_delete_path(PlannerInfo *root,
 	 * update/delete from the index, requiring the scan.
 	 */
 	if (has_applicable_indices(relation, update_attrs, no_update_index_list))
+	{
+		RelationClose(relation);
+		return false;
+	}
+
+	/*
+	 * Now it is OK to bail out because of unpushable expressions.
+	 * We have made a list, and can skip unaffected indexes even though
+	 * the update is not single row.
+	 */
+	if (has_unpushable_exprs)
 	{
 		RelationClose(relation);
 		return false;
@@ -3912,6 +3982,17 @@ create_indexscan_plan(PlannerInfo *root,
 	Assert(best_path->path.parent->rtekind == RTE_RELATION);
 
 	/*
+<<<<<<< createplan.c
+	 * Build "stripped" indexquals structure (no RestrictInfos) to pass to
+	 * executor as indexqualorig
+	 */
+	stripped_indexquals =
+		!bms_is_empty(root->yb_cur_batched_relids) && IsYugaByteEnabled()
+		? yb_get_actual_batched_clauses(root,
+										indexquals,
+										best_path)
+		: get_actual_clauses(indexquals);
+=======
 	 * Extract the index qual expressions (stripped of RestrictInfos) from the
 	 * IndexClauses list, and prepare a copy with index Vars substituted for
 	 * table Vars.  (This step also does replace_nestloop_params on the
@@ -3920,6 +4001,7 @@ create_indexscan_plan(PlannerInfo *root,
 	fix_indexqual_references(root, best_path,
 							 &stripped_indexquals,
 							 &fixed_indexquals);
+>>>>>>> createplan.c
 
 	/*
 	 * Likewise fix up index attr references in the ORDER BY expressions.
@@ -5248,6 +5330,8 @@ create_customscan_plan(PlannerInfo *root, CustomPath *best_path,
  *
  *****************************************************************************/
 
+<<<<<<< createplan.c
+=======
 static Relids
 get_batched_relids(NestPath *nest)
 {
@@ -5269,6 +5353,7 @@ is_nestloop_batched(NestPath *nest)
 					   batched_relids);
 }
 
+>>>>>>> createplan.c
 static NestLoop *
 create_nestloop_plan(PlannerInfo *root,
 					 NestPath *best_path)
@@ -5284,11 +5369,34 @@ create_nestloop_plan(PlannerInfo *root,
 	List	   *nestParams;
 	Relids		saveOuterRels = root->curOuterRels;
 
+<<<<<<< createplan.c
+	bool yb_is_batched;
+	size_t yb_num_hashClauseInfos;
+	YbBNLHashClauseInfo *yb_hashClauseInfos;
+
+	/* NestLoop can project, so no need to be picky about child tlists */
+	outer_plan = create_plan_recurse(root, best_path->outerjoinpath, 0);
+=======
 	/* NestLoop can project, so no need to be picky about child tlists */
 	outer_plan = create_plan_recurse(root, best_path->jpath.outerjoinpath, 0);
+>>>>>>> createplan.c
 
 	/* For a nestloop, include outer relids in curOuterRels for inner side */
 	root->curOuterRels = bms_union(root->curOuterRels,
+<<<<<<< createplan.c
+								   best_path->outerjoinpath->parent->relids);
+
+	Relids prev_yb_cur_batched_relids = root->yb_cur_batched_relids;
+
+	Relids batched_relids = yb_get_batched_relids(best_path);
+
+	root->yb_cur_batched_relids = bms_union(root->yb_cur_batched_relids,
+										    batched_relids);
+
+	yb_is_batched = yb_is_nestloop_batched(best_path);
+
+	outerrelids = best_path->outerjoinpath->parent->relids;
+=======
 								   best_path->jpath.outerjoinpath->parent->relids);
 
 	Relids prev_yb_curbatchedrelids = root->yb_curbatchedrelids;
@@ -5308,6 +5416,7 @@ create_nestloop_plan(PlannerInfo *root,
 	/* Restore curOuterRels */
 	bms_free(root->curOuterRels);
 	root->curOuterRels = saveOuterRels;
+>>>>>>> createplan.c
 
 	/* Sort join qual clauses into best execution order */
 	joinrestrictclauses = order_qual_clauses(root, joinrestrictclauses);
@@ -5327,8 +5436,86 @@ create_nestloop_plan(PlannerInfo *root,
 		otherclauses = NIL;
 	}
 
+<<<<<<< createplan.c
+	if (yb_is_batched)
+	{
+		/* Add the available batched outer rels. */
+		root->yb_availBatchedRelids =
+			lcons(outerrelids, root->yb_availBatchedRelids);
+
+		/* Collect all the equality operators of the batched join conditions. */
+		/*
+		 * This needs to happen before the inner plan is created as the inner
+		 * plan creation could "zip" up the batched clauses and convert all
+		 * the equality operators to RECORD_EQ.
+		 */
+		ListCell *l;
+		yb_hashClauseInfos =
+			palloc0(joinrestrictclauses->length * sizeof(YbBNLHashClauseInfo));
+		
+		/* YB: This length is later adjusted in setrefs.c. */
+		yb_num_hashClauseInfos = joinrestrictclauses->length;
+
+		Relids batched_outerrelids =
+			bms_difference(outerrelids,
+						   yb_get_unbatched_relids(best_path));
+
+		Relids inner_relids = best_path->innerjoinpath->parent->relids;
+
+		YbBNLHashClauseInfo *current_hinfo = yb_hashClauseInfos;
+		foreach(l, joinrestrictclauses)
+		{
+			Oid hashOpno = InvalidOid;
+			RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);	
+			if (!list_member_ptr(joinclauses, rinfo->clause))
+			{
+				yb_num_hashClauseInfos--;
+				continue;
+			}
+
+			if (rinfo->can_join &&
+				OidIsValid(rinfo->hashjoinoperator) &&
+				can_batch_rinfo(rinfo, batched_outerrelids, inner_relids))
+			{
+				/* if nlhash can process this */
+				Assert(is_opclause(rinfo->clause));
+				RestrictInfo *batched_rinfo =
+					get_batched_restrictinfo(rinfo,batched_outerrelids,
+											 inner_relids);
+
+				hashOpno = ((OpExpr *) batched_rinfo->clause)->opno;
+			}
+
+			current_hinfo->hashOp = hashOpno;
+			current_hinfo++;
+		}
+	}
+
+
+	inner_plan = create_plan_recurse(root, best_path->innerjoinpath, 0);
+
+	bms_free(root->yb_cur_batched_relids);
+	root->yb_cur_batched_relids = prev_yb_cur_batched_relids;
+
+	/* restore availBatchedRelids */
+	if (yb_is_batched)
+	{
+		Assert(bms_equal((Relids) linitial(root->yb_availBatchedRelids),
+			   outerrelids));
+		root->yb_availBatchedRelids =
+			list_delete_first(root->yb_availBatchedRelids);
+	}
+
+	/* Restore curOuterRels */
+	bms_free(root->curOuterRels);
+	root->curOuterRels = saveOuterRels;
+
+	/* Replace any outer-relation variables with nestloop params */
+	if (best_path->path.param_info)
+=======
 	/* Replace any outer-relation variables with nestloop params */
 	if (best_path->jpath.path.param_info)
+>>>>>>> createplan.c
 	{
 		joinclauses = (List *)
 			replace_nestloop_params(root, (Node *) joinclauses);
@@ -5340,6 +5527,11 @@ create_nestloop_plan(PlannerInfo *root,
 	 * Identify any nestloop parameters that should be supplied by this join
 	 * node, and remove them from root->curOuterParams.
 	 */
+<<<<<<< createplan.c
+	nestParams = identify_current_nestloop_params(root, outerrelids);
+	if (yb_is_batched)
+	{
+=======
 	outerrelids = best_path->jpath.outerjoinpath->parent->relids;
 	nestParams = identify_current_nestloop_params(root, outerrelids);
 
@@ -5379,6 +5571,7 @@ create_nestloop_plan(PlannerInfo *root,
 				hashOps = lappend_oid(hashOps, InvalidOid);
 			}
 		}
+>>>>>>> createplan.c
 		join_plan =
 			(NestLoop *) make_YbBatchedNestLoop(tlist,
 												joinclauses,
@@ -5386,9 +5579,16 @@ create_nestloop_plan(PlannerInfo *root,
 												nestParams,
 												outer_plan,
 												inner_plan,
+<<<<<<< createplan.c
+												best_path->jointype,
+												best_path->inner_unique,
+												yb_num_hashClauseInfos,
+												yb_hashClauseInfos);
+=======
 												best_path->jpath.jointype,
 												best_path->jpath.inner_unique,
 												hashOps);
+>>>>>>> createplan.c
 	}
 	else
 	{
@@ -5998,14 +6198,29 @@ replace_nestloop_params_mutator(Node *node, PlannerInfo *root)
 			saop->opno = opexpr->opno;
 			saop->opfuncid = opexpr->opfuncid;
 			saop->useOr = true;
+			saop->inputcollid = opexpr->inputcollid;
 
 			saop->args = NIL;
 
-			Var *inner_var = (Var*) linitial(opexpr->args);
-			saop->args = lappend(saop->args, inner_var);
+			Oid scalar_type = InvalidOid;
+			Oid collid = InvalidOid;
+
+			Expr *inner_expr = (Expr*) linitial(opexpr->args);
+			saop->args = lappend(saop->args, inner_expr);
+
+			if(IsA(inner_expr, RowExpr))
+			{
+				RowExpr *rowexpr = (RowExpr *) inner_expr;
+				scalar_type = rowexpr->row_typeid;
+			}
+			else
+			{
+				Assert(IsA(inner_expr, Var) || IsA(inner_expr, RelabelType));
+				scalar_type = exprType((Node*) inner_expr);
+				collid = exprCollation((Node*)inner_expr);
+			}
 
 			ArrayExpr *arrexpr = makeNode(ArrayExpr);
-			Oid scalar_type = inner_var->vartype;
 			Oid array_type;
 			if (OidIsValid(scalar_type) && scalar_type != RECORDOID)
 				array_type = get_array_type(scalar_type);
@@ -6015,7 +6230,8 @@ replace_nestloop_params_mutator(Node *node, PlannerInfo *root)
 			arrexpr->array_typeid = array_type;
 			arrexpr->element_typeid = scalar_type;
 			arrexpr->multidims = false;
-			arrexpr->array_collid = inner_var->varcollid;
+			arrexpr->array_collid = collid;
+			arrexpr->location = -1;
 			arrexpr->elements =
 				(List*) replace_nestloop_params(root, lsecond(opexpr->args));
 			saop->args = lappend(saop->args, arrexpr);
@@ -6052,6 +6268,157 @@ fix_indexqual_references(PlannerInfo *root, IndexPath *index_path,
 						 List **stripped_indexquals_p, List **fixed_indexquals_p)
 {
 	IndexOptInfo *index = index_path->indexinfo;
+<<<<<<< createplan.c
+	List	   *fixed_indexquals;
+	ListCell   *lcc,
+			   *lci;
+
+	fixed_indexquals = NIL;
+
+	List *batched_rinfos = NIL;
+
+	forboth(lcc, index_path->indexquals, lci, index_path->indexqualcols)
+	{
+		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lcc);
+		RestrictInfo *tmp_batched =
+			get_batched_restrictinfo(rinfo,
+									 root->yb_cur_batched_relids,
+									 index_path->indexinfo->rel->relids);
+
+		if (tmp_batched)
+		{
+			if (list_member_ptr(batched_rinfos, tmp_batched))
+				continue;
+			rinfo = tmp_batched;
+			batched_rinfos = lappend(batched_rinfos, tmp_batched);
+		}
+
+		int			indexcol = lfirst_int(lci);
+		Node	   *clause;
+
+		/*
+		 * Replace any outer-relation variables with nestloop params.
+		 *
+		 * This also makes a copy of the clause, so it's safe to modify it
+		 * in-place below.
+		 */
+		clause = replace_nestloop_params(root, (Node *) rinfo->clause);
+
+		if (IsA(clause, OpExpr))
+		{
+			OpExpr	   *op = (OpExpr *) clause;
+
+			if (list_length(op->args) != 2)
+				elog(ERROR, "indexqual clause is not binary opclause");
+
+			/*
+			 * Check to see if the indexkey is on the right; if so, commute
+			 * the clause.  The indexkey should be the side that refers to
+			 * (only) the base relation.
+			 */
+			if (!bms_equal(rinfo->left_relids, index->rel->relids))
+				CommuteOpExpr(op);
+
+			/*
+			 * Now replace the indexkey expression with an index Var.
+			 */
+			linitial(op->args) = fix_indexqual_operand(linitial(op->args),
+													   index,
+													   indexcol);
+		}
+		else if (IsA(clause, RowCompareExpr))
+		{
+			RowCompareExpr *rc = (RowCompareExpr *) clause;
+			Expr	   *newrc;
+			List	   *indexcolnos;
+			bool		var_on_left;
+			ListCell   *lca,
+					   *lcai;
+
+			/*
+			 * Re-discover which index columns are used in the rowcompare.
+			 */
+			newrc = adjust_rowcompare_for_index(rc,
+												index,
+												indexcol,
+												&indexcolnos,
+												&var_on_left);
+
+			/*
+			 * Trouble if adjust_rowcompare_for_index thought the
+			 * RowCompareExpr didn't match the index as-is; the clause should
+			 * have gone through that routine already.
+			 */
+			if (newrc != (Expr *) rc)
+				elog(ERROR, "inconsistent results from adjust_rowcompare_for_index");
+
+			/*
+			 * Check to see if the indexkey is on the right; if so, commute
+			 * the clause.
+			 */
+			if (!var_on_left)
+				CommuteRowCompareExpr(rc);
+
+			/*
+			 * Now replace the indexkey expressions with index Vars.
+			 */
+			Assert(list_length(rc->largs) == list_length(indexcolnos));
+			forboth(lca, rc->largs, lcai, indexcolnos)
+			{
+				lfirst(lca) = fix_indexqual_operand(lfirst(lca),
+													index,
+													lfirst_int(lcai));
+			}
+		}
+		else if (IsA(clause, ScalarArrayOpExpr) &&
+				 IsA(linitial(((ScalarArrayOpExpr*) clause)->args), RowExpr))
+		{
+			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
+
+			RowExpr *leftrow = linitial(saop->args);
+
+			ListCell *lc;
+			foreach(lc, leftrow->args)
+			{
+				Node *operand = lfirst(lc);
+				for(int i = 0; i < index->nkeycolumns; i++)
+				{
+					if(match_index_to_operand(operand, i, index))
+					{
+						lfirst(lc) = fix_indexqual_operand(operand, index, i);
+					}
+				}
+			}
+		}
+		else if (IsA(clause, ScalarArrayOpExpr))
+		{
+			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
+
+			/* Never need to commute... */
+
+			/* Replace the indexkey expression with an index Var. */
+			linitial(saop->args) = fix_indexqual_operand(linitial(saop->args),
+														 index,
+														 indexcol);
+		}
+		else if (IsA(clause, NullTest))
+		{
+			NullTest   *nt = (NullTest *) clause;
+
+			/* Replace the indexkey expression with an index Var. */
+			nt->arg = (Expr *) fix_indexqual_operand((Node *) nt->arg,
+													 index,
+													 indexcol);
+		}
+		else
+			elog(ERROR, "unsupported indexqual type: %d",
+				 (int) nodeTag(clause));
+
+		fixed_indexquals = lappend(fixed_indexquals, clause);
+	}
+
+	return fixed_indexquals;
+=======
 	List	   *stripped_indexquals;
 	List	   *fixed_indexquals;
 	ListCell   *lc;
@@ -6107,6 +6474,7 @@ fix_indexqual_references(PlannerInfo *root, IndexPath *index_path,
 
 	*stripped_indexquals_p = stripped_indexquals;
 	*fixed_indexquals_p = fixed_indexquals;
+>>>>>>> createplan.c
 }
 
 /*
@@ -6570,8 +6938,17 @@ is_index_only_refs(List *expr_refs, IndexOptInfo *indexinfo)
 		{
 			if (colref->attno == indexinfo->indexkeys[i])
 			{
-				found = true;
-				break;
+				/*
+				 * If index key can not return, it does not have actual value
+				 * to evaluate the expression.
+				 */
+				if (indexinfo->canreturn[i])
+				{
+					found = true;
+					break;
+				}
+				else
+					return false;
 			}
 		}
 		if (!found)
@@ -7168,14 +7545,15 @@ make_nestloop(List *tlist,
 
 static YbBatchedNestLoop *
 make_YbBatchedNestLoop(List *tlist,
-					 List *joinclauses,
-					 List *otherclauses,
-					 List *nestParams,
-					 Plan *lefttree,
-					 Plan *righttree,
-					 JoinType jointype,
-					 bool inner_unique,
-					 List *hashOps)
+					   List *joinclauses,
+					   List *otherclauses,
+					   List *nestParams,
+					   Plan *lefttree,
+					   Plan *righttree,
+					   JoinType jointype,
+					   bool inner_unique,
+					   size_t num_hashClauseInfos,
+					   YbBNLHashClauseInfo *hashClauseInfos)
 {
 	YbBatchedNestLoop   *node = makeNode(YbBatchedNestLoop);
 	Plan	   *plan = &node->nl.join.plan;
@@ -7188,9 +7566,8 @@ make_YbBatchedNestLoop(List *tlist,
 	node->nl.join.inner_unique = inner_unique;
 	node->nl.join.joinqual = joinclauses;
 	node->nl.nestParams = nestParams;
-	node->hashOps = hashOps;
-	node->innerHashAttNos = NULL;
-	node->outerParamExprs = NULL;
+	node->num_hashClauseInfos = num_hashClauseInfos;
+	node->hashClauseInfos = hashClauseInfos;
 
 	return node;
 }

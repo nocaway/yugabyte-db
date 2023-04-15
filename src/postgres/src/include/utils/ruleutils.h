@@ -30,6 +30,19 @@ extern char *pg_get_partconstrdef_string(Oid partitionId, char *aliasname);
 
 extern char *pg_get_constraintdef_command(Oid constraintId);
 extern char *deparse_expression(Node *expr, List *dpcontext,
+<<<<<<< ruleutils.h
+				   bool forceprefix, bool showimplicit);
+extern char *yb_deparse_expression(Node *expr, List *dpcontext,
+				   				   bool forceprefix, bool showimplicit,
+								   bool verbose);
+extern List *deparse_context_for(const char *aliasname, Oid relid);
+extern List *deparse_context_for_plan_rtable(List *rtable, List *rtable_names);
+extern List *set_deparse_context_planstate(List *dpcontext,
+							Node *planstate, List *ancestors);
+extern List *select_rtable_names_for_explain(List *rtable,
+								Bitmapset *rels_used);
+extern char *generate_collation_name(Oid collid);
+=======
 								bool forceprefix, bool showimplicit);
 extern List *deparse_context_for(const char *aliasname, Oid relid);
 extern List *deparse_context_for_plan_tree(struct PlannedStmt *pstmt,
@@ -40,8 +53,14 @@ extern List *select_rtable_names_for_explain(List *rtable,
 											 Bitmapset *rels_used);
 extern char *generate_collation_name(Oid collid);
 extern char *generate_opclass_name(Oid opclass);
+>>>>>>> ruleutils.h
 extern char *get_range_partbound_string(List *bound_datums);
 
+<<<<<<< ruleutils.h
+extern void yb_get_dependent_views(Oid relid, List **view_oids,
+								   List **view_defs);
+=======
 extern char *pg_get_statisticsobjdef_string(Oid statextid);
+>>>>>>> ruleutils.h
 
 #endif							/* RULEUTILS_H */

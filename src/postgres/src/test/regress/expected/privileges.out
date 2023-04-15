@@ -844,26 +844,47 @@ SET SESSION AUTHORIZATION regress_priv_user2;
 -- the error messages don't leak the secret fields.
 -- simple insert.
 INSERT INTO errtst (a, b) VALUES ('aaa', NULL);
+<<<<<<< privileges.out
+ERROR:  null value in column "b" violates not-null constraint
+=======
 ERROR:  null value in column "b" of relation "errtst_part_1" violates not-null constraint
+>>>>>>> privileges.out
 DETAIL:  Failing row contains (a, b, c) = (aaa, null, null).
 -- simple update.
 UPDATE errtst SET b = NULL;
+<<<<<<< privileges.out
+ERROR:  null value in column "b" violates not-null constraint
+DETAIL:  Failing row contains (b) = (null).
+=======
 ERROR:  null value in column "b" of relation "errtst_part_1" violates not-null constraint
 DETAIL:  Failing row contains (a, b, c) = (aaa, null, ccc).
+>>>>>>> privileges.out
 -- partitioning key is updated, doesn't move the row.
 UPDATE errtst SET a = 'aaa', b = NULL;
+<<<<<<< privileges.out
+ERROR:  null value in column "b" violates not-null constraint
+=======
 ERROR:  null value in column "b" of relation "errtst_part_1" violates not-null constraint
+>>>>>>> privileges.out
 DETAIL:  Failing row contains (a, b, c) = (aaa, null, ccc).
 -- row is moved to another partition.
 UPDATE errtst SET a = 'aaaa', b = NULL;
+<<<<<<< privileges.out
+ERROR:  null value in column "b" violates not-null constraint
+=======
 ERROR:  null value in column "b" of relation "errtst_part_2" violates not-null constraint
+>>>>>>> privileges.out
 DETAIL:  Failing row contains (a, b, c) = (aaaa, null, ccc).
 -- row is moved to another partition. This differs from the previous case in
 -- that the new partition is excluded by constraint exclusion, so its
 -- ResultRelInfo is not created at ExecInitModifyTable, but needs to be
 -- constructed on the fly when the updated tuple is routed to it.
 UPDATE errtst SET a = 'aaaa', b = NULL WHERE a = 'aaa';
+<<<<<<< privileges.out
+ERROR:  null value in column "b" violates not-null constraint
+=======
 ERROR:  null value in column "b" of relation "errtst_part_2" violates not-null constraint
+>>>>>>> privileges.out
 DETAIL:  Failing row contains (a, b, c) = (aaaa, null, ccc).
 SET SESSION AUTHORIZATION regress_priv_user1;
 DROP TABLE errtst;

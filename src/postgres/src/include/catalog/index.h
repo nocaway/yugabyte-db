@@ -70,6 +70,32 @@ extern void index_check_primary_key(Relation heapRel,
 #define	INDEX_CREATE_PARTITIONED			(1 << 5)
 #define INDEX_CREATE_INVALID				(1 << 6)
 
+<<<<<<< index.h
+extern Oid index_create(Relation heapRelation,
+			 const char *indexRelationName,
+			 Oid indexRelationId,
+			 Oid parentIndexRelid,
+			 Oid parentConstraintId,
+			 Oid relFileNode,
+			 IndexInfo *indexInfo,
+			 List *indexColNames,
+			 Oid accessMethodObjectId,
+			 Oid tableSpaceId,
+			 Oid *collationObjectId,
+			 Oid *classObjectId,
+			 int16 *coloptions,
+			 Datum reloptions,
+			 bits16 flags,
+			 bits16 constr_flags,
+			 bool allow_system_table_mods,
+			 bool is_internal,
+			 Oid *constraintId,
+			 OptSplit *split_options,
+			 const bool skip_index_backfill,
+			 bool is_colocated,
+			 Oid tablegroupId,
+			 Oid colocationId);
+=======
 extern Oid	index_create(Relation heapRelation,
 						 const char *indexRelationName,
 						 Oid indexRelationId,
@@ -93,6 +119,7 @@ extern Oid	index_create(Relation heapRelation,
 						 const bool skip_index_backfill,
 						 Oid tablegroupId,
 						 Oid colocationId);
+>>>>>>> index.h
 
 #define	INDEX_CONSTR_CREATE_MARK_AS_PRIMARY	(1 << 0)
 #define	INDEX_CONSTR_CREATE_DEFERRABLE		(1 << 1)

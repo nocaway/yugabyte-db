@@ -21,18 +21,38 @@
 
 #include "postgres.h"
 
+#include "funcapi.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+<<<<<<< mcxt.c
+#include "utils/builtins.h"
+=======
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "utils/fmgrprotos.h"
+>>>>>>> mcxt.c
 #include "utils/memdebug.h"
 #include "utils/memutils.h"
 
+<<<<<<< mcxt.c
+/* YB includes */
+#include "pgstat.h"
+#include "pg_yb_utils.h"
+#include "commands/explain.h"
+#include "yb/yql/pggate/ybc_pggate.h"
+
+#ifdef __linux__
+#include <stdio.h>
+#include <unistd.h>
+#else
+#include <libproc.h>
+#endif
+=======
 /* Yugabyte includes */
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "pg_yb_utils.h"
+>>>>>>> mcxt.c
 
 YbPgMemTracker PgMemTracker = {0};
 
@@ -49,7 +69,7 @@ YbPgMemTracker PgMemTracker = {0};
 static Size
 YbSnapshotMemory()
 {
-#ifdef TCMALLOC_ENABLED
+#ifdef YB_TCMALLOC_ENABLED
 	int64_t cur_tc_actual_sz = 0;
 	YBCGetPgggateCurrentAllocatedBytes(&cur_tc_actual_sz);
 	return cur_tc_actual_sz;
@@ -71,9 +91,58 @@ YbPgMemUpdateMax()
 			snapshot_mem - PgMemTracker.stmt_max_mem_base_bytes);
 }
 
+/*
+ * Update the current actual heap memory usage in MemTracker by getting
+ * the value from the root MemTracker's consumption
+ */
+static void
+YbPgMemUpdateCur()
+{
+#ifdef YB_TCMALLOC_ENABLED
+	YbGetActualHeapSizeBytes(&PgMemTracker.backend_cur_allocated_mem_bytes);
+	yb_pgstat_report_allocated_mem_bytes();
+#endif
+}
+
+int64_t
+YbPgGetCurRSSMemUsage(int pid)
+{
+	if (!yb_enable_memory_tracking)
+		return -1;
+#ifdef __linux__
+	uint64 resident = 0;
+	char path[20];
+	snprintf(path, 20, "/proc/%d/statm", pid);
+	FILE* fp = fopen(path, "r");
+
+	if (fp == NULL)
+		return -1; /* Can't open */
+
+	if (fscanf(fp, "%*s%lu", &resident) != 1)
+	{
+		fclose(fp);
+		return -1; /* Can't read */
+	}
+	fclose(fp);
+	return resident * sysconf(_SC_PAGESIZE);
+#else
+	struct proc_taskallinfo info;
+	int result = proc_pidinfo(pid, PROC_PIDTASKALLINFO, 0, &info,
+		sizeof(struct proc_taskallinfo));
+
+	if (result == 0 || result < sizeof(info))
+		return -1; /* Can't be determined or wrong value */
+
+	return info.ptinfo.pti_resident_size;
+#endif
+}
+
 void
 YbPgMemAddConsumption(Size sz)
 {
+	if (!yb_enable_memory_tracking)
+		return;
+
 	if (IsMultiThreadedMode())
 		return;
 
@@ -87,22 +156,34 @@ YbPgMemAddConsumption(Size sz)
 	PgMemTracker.pggate_alive = YBCTryMemConsume(
 		PgMemTracker.pggate_alive ? sz : PgMemTracker.pg_cur_mem_bytes);
 
-	/* Only update max memory when memory is increasing */
-	YbPgMemUpdateMax();
+	if (yb_run_with_explain_analyze)
+		/* Only update max memory when memory is increasing */
+		YbPgMemUpdateMax();
+
+	/* Update current heap memory usage */
+	YbPgMemUpdateCur();
 }
 
 void
 YbPgMemSubConsumption(Size sz)
 {
+	if (!yb_enable_memory_tracking)
+		return;
+
 	if (IsMultiThreadedMode())
 		return;
 
 	// Avoid overflow when subtracting sz.
-	PgMemTracker.pg_cur_mem_bytes = Max(PgMemTracker.pg_cur_mem_bytes - sz, 0);
+	PgMemTracker.pg_cur_mem_bytes = PgMemTracker.pg_cur_mem_bytes >= sz ?
+										PgMemTracker.pg_cur_mem_bytes - sz :
+										0;
 	// Only call release if pggate is alive, and update its liveness from the
 	// return value.
 	if (PgMemTracker.pggate_alive)
 		PgMemTracker.pggate_alive = YBCTryMemRelease(sz);
+
+	/* Update current heap memory usage */
+	YbPgMemUpdateCur();
 }
 
 void
@@ -133,10 +214,18 @@ MemoryContext SetThreadLocalCurrentMemoryContext(MemoryContext memctx)
 	return (MemoryContext) YBCPgSetThreadLocalCurrentMemoryContext(memctx);
 }
 
+<<<<<<< mcxt.c
+MemoryContext
+CreateThreadLocalMemoryContext(MemoryContext parent,
+							   const char *name)
+{
+	return AllocSetContextCreateExtended(parent, name, ALLOCSET_START_SMALL_SIZES);
+=======
 MemoryContext CreateThreadLocalCurrentMemoryContext(MemoryContext parent,
 													const char *name)
 {
 	return AllocSetContextCreateInternal(parent, name, ALLOCSET_START_SMALL_SIZES);
+>>>>>>> mcxt.c
 }
 
 void PrepareThreadLocalCurrentMemoryContext()
@@ -196,6 +285,11 @@ static void MemoryContextStatsPrint(MemoryContext context, void *passthru,
 #define AssertNotInCriticalSection(context) \
 	Assert(CritSectionCount == 0 || (context)->allowInCritSection)
 
+/* ----------
+ * The max bytes for showing identifiers of MemoryContext.
+ * ----------
+ */
+#define MEMORY_CONTEXT_IDENT_DISPLAY_SIZE	1024
 
 /*****************************************************************************
  *	  EXPORTED ROUTINES														 *
@@ -1502,6 +1596,136 @@ pchomp(const char *in)
 	while (n > 0 && in[n - 1] == '\n')
 		n--;
 	return pnstrdup(in, n);
+}
+
+/*
+ * PutMemoryContextsStatsTupleStore
+ *		One recursion level for pg_get_backend_memory_contexts.
+ */
+static void
+PutMemoryContextsStatsTupleStore(Tuplestorestate *tupstore,
+								TupleDesc tupdesc, MemoryContext context,
+								const char *parent, int level)
+{
+#define PG_GET_BACKEND_MEMORY_CONTEXTS_COLS	9
+
+	Datum		values[PG_GET_BACKEND_MEMORY_CONTEXTS_COLS];
+	bool		nulls[PG_GET_BACKEND_MEMORY_CONTEXTS_COLS];
+	MemoryContextCounters stat;
+	MemoryContext child;
+	const char *name;
+	const char *ident;
+
+	AssertArg(MemoryContextIsValid(context));
+
+	name = context->name;
+	ident = context->ident;
+
+	/*
+	 * To be consistent with logging output, we label dynahash contexts
+	 * with just the hash table name as with MemoryContextStatsPrint().
+	 */
+	if (ident && strcmp(name, "dynahash") == 0)
+	{
+		name = ident;
+		ident = NULL;
+	}
+
+	/* Examine the context itself */
+	memset(&stat, 0, sizeof(stat));
+	(*context->methods->stats) (context, NULL, (void *) &level, &stat);
+
+	memset(values, 0, sizeof(values));
+	memset(nulls, 0, sizeof(nulls));
+
+	if (name)
+		values[0] = CStringGetTextDatum(name);
+	else
+		nulls[0] = true;
+
+	if (ident)
+	{
+		int		idlen = strlen(ident);
+		char		clipped_ident[MEMORY_CONTEXT_IDENT_DISPLAY_SIZE];
+
+		/*
+		 * Some identifiers such as SQL query string can be very long,
+		 * truncate oversize identifiers.
+		 */
+		if (idlen >= MEMORY_CONTEXT_IDENT_DISPLAY_SIZE)
+			idlen = pg_mbcliplen(ident, idlen, MEMORY_CONTEXT_IDENT_DISPLAY_SIZE - 1);
+
+		memcpy(clipped_ident, ident, idlen);
+		clipped_ident[idlen] = '\0';
+		values[1] = CStringGetTextDatum(clipped_ident);
+	}
+	else
+		nulls[1] = true;
+
+	if (parent)
+		values[2] = CStringGetTextDatum(parent);
+	else
+		nulls[2] = true;
+
+	values[3] = Int32GetDatum(level);
+	values[4] = Int64GetDatum(stat.totalspace);
+	values[5] = Int64GetDatum(stat.nblocks);
+	values[6] = Int64GetDatum(stat.freespace);
+	values[7] = Int64GetDatum(stat.freechunks);
+	values[8] = Int64GetDatum(stat.totalspace - stat.freespace);
+	tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+
+	for (child = context->firstchild; child != NULL; child = child->nextchild)
+	{
+		PutMemoryContextsStatsTupleStore(tupstore, tupdesc,
+								  child, name, level + 1);
+	}
+}
+
+/*
+ * pg_get_backend_memory_contexts
+ *		SQL SRF showing backend memory context.
+ */
+Datum
+pg_get_backend_memory_contexts(PG_FUNCTION_ARGS)
+{
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
+	MemoryContext per_query_ctx;
+	MemoryContext oldcontext;
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	PutMemoryContextsStatsTupleStore(tupstore, tupdesc,
+								TopMemoryContext, NULL, 0);
+
+	/* clean up and return the tuplestore */
+	tuplestore_donestoring(tupstore);
+
+	return (Datum) 0;
 }
 
 /*

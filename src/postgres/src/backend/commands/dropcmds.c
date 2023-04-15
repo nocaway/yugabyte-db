@@ -457,8 +457,17 @@ does_not_exist_skipping(ObjectType objtype, Node *object)
 			break;
 		case OBJECT_YBTABLEGROUP:
 			msg = gettext_noop("tablegroup \"%s\" does not exist, skipping");
+<<<<<<< dropcmds.c
+			name = strVal((Value *) object);
+			break;
+		case OBJECT_YBPROFILE:
+			msg = gettext_noop("profile \"%s\" does not exist, skipping");
+			name = strVal((Value *) object);
+			break;
+=======
 			name = strVal(object);
 			break;
+>>>>>>> dropcmds.c
 		case OBJECT_FOREIGN_SERVER:
 			msg = gettext_noop("server \"%s\" does not exist, skipping");
 			name = strVal(object);

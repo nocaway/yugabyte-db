@@ -379,6 +379,11 @@ SyncRepCancelWait(void)
 }
 
 void
+<<<<<<< syncrep.c
+SyncRepCleanupAtProcExit(PGPROC *proc)
+{
+	if (!SHMQueueIsDetached(&(proc->syncRepLinks)))
+=======
 SyncRepCleanupAtProcExit(void)
 {
 	/*
@@ -386,13 +391,18 @@ SyncRepCleanupAtProcExit(void)
 	 * slow down backend exit.
 	 */
 	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+>>>>>>> syncrep.c
 	{
 		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
+<<<<<<< syncrep.c
+		SHMQueueDelete(&(proc->syncRepLinks));
+=======
 
 		/* maybe we have just been removed, so recheck */
 		if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
 			SHMQueueDelete(&(MyProc->syncRepLinks));
 
+>>>>>>> syncrep.c
 		LWLockRelease(SyncRepLock);
 	}
 }

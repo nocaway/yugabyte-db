@@ -176,27 +176,27 @@ CreateExecutorState(void)
 	estate->yb_es_is_single_row_modify_txn = false;
 	estate->yb_es_is_fk_check_disabled = false;
 	estate->yb_conflict_slot = NULL;
-	/*
-	 * The in txn limit used for this query. This will be initialized by the first
-	 * read operation invoked for this query, and all later reads performed by
-	 * this query will not read any data written past this time.
-	 *
-	 * TODO: Each query can have multiple "EState"s. Fix logic for such cases.
-	 */
-	estate->yb_es_in_txn_limit_ht = 0;
+	estate->yb_es_in_txn_limit_ht_for_reads = 0;
 
 	estate->yb_exec_params.limit_count = 0;
 	estate->yb_exec_params.limit_offset = 0;
 	estate->yb_exec_params.limit_use_default = true;
 	estate->yb_exec_params.rowmark = -1;
 	estate->yb_exec_params.is_index_backfill = false;
+
 	/*
-	 * Pointer to the query's in txn limit. This pointer is passed
-	 * down to all the DocDB read operations invoked for this query. Only
-	 * the first read operation initializes its value, and all the other
-	 * operations ensure that they don't read any value written past this time.
+	 * Pointer to the query's in_txn_limit_ht for read ops. This pointer is passed
+	 * down via PgDocOp instances to the DocDB read operations invoked for this
+	 * query. Only the first read operation initializes its value, and all the
+	 * other operations ensure that they don't read any value written past this
+	 * time.
+	 *
+	 * TODO(#16239): Each SQL statement can have multiple "EState"s. But we need
+	 * to ensure that only one in_txn_limit_ht is used for reads in one SQL
+	 * statement. Fix logic for such cases.
 	 */
-	estate->yb_exec_params.statement_in_txn_limit = &estate->yb_es_in_txn_limit_ht;
+	estate->yb_exec_params.stmt_in_txn_limit_ht_for_reads =
+		&estate->yb_es_in_txn_limit_ht_for_reads;
 
 	return estate;
 }
@@ -1290,25 +1290,53 @@ Bitmapset *
 ExecGetInsertedCols(ResultRelInfo *relinfo, EState *estate)
 {
 	/*
+<<<<<<< execUtils.c
+	 * The columns are stored in the range table entry. If this ResultRelInfo
+	 * doesn't have an entry in the range table (i.e. if it represents a
+	 * partition routing target), fetch the parent's RTE and map the columns
+	 * to the order they are in the partition.
+=======
 	 * The columns are stored in the range table entry.  If this ResultRelInfo
 	 * represents a partition routing target, and doesn't have an entry of its
 	 * own in the range table, fetch the parent's RTE and map the columns to
 	 * the order they are in the partition.
+>>>>>>> execUtils.c
 	 */
 	if (relinfo->ri_RangeTableIndex != 0)
 	{
+<<<<<<< execUtils.c
+		RangeTblEntry *rte = rt_fetch(relinfo->ri_RangeTableIndex,
+									  estate->es_range_table);
+=======
 		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
+>>>>>>> execUtils.c
 
 		return rte->insertedCols;
 	}
+<<<<<<< execUtils.c
+	else
+=======
 	else if (relinfo->ri_RootResultRelInfo)
+>>>>>>> execUtils.c
 	{
 		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+<<<<<<< execUtils.c
+		RangeTblEntry *rte = rt_fetch(rootRelInfo->ri_RangeTableIndex,
+									  estate->es_range_table);
+		TupleConversionMap *map;
+
+		map = convert_tuples_by_name(RelationGetDescr(rootRelInfo->ri_RelationDesc),
+									 RelationGetDescr(relinfo->ri_RelationDesc),
+									 gettext_noop("could not convert row type"));
+		if (map != NULL)
+			return execute_attr_map_cols(rte->insertedCols, map, rootRelInfo->ri_RelationDesc);
+=======
 		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
 
 		if (relinfo->ri_RootToPartitionMap != NULL)
 			return execute_attr_map_cols(relinfo->ri_RootToPartitionMap->attrMap,
 										 rte->insertedCols);
+>>>>>>> execUtils.c
 		else
 			return rte->insertedCols;
 	}
@@ -1331,18 +1359,39 @@ ExecGetUpdatedCols(ResultRelInfo *relinfo, EState *estate)
 	/* see ExecGetInsertedCols() */
 	if (relinfo->ri_RangeTableIndex != 0)
 	{
+<<<<<<< execUtils.c
+		RangeTblEntry *rte = rt_fetch(relinfo->ri_RangeTableIndex,
+									  estate->es_range_table);
+=======
 		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
+>>>>>>> execUtils.c
 
 		return rte->updatedCols;
 	}
+<<<<<<< execUtils.c
+	else
+=======
 	else if (relinfo->ri_RootResultRelInfo)
+>>>>>>> execUtils.c
 	{
 		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
+<<<<<<< execUtils.c
+		RangeTblEntry *rte = rt_fetch(rootRelInfo->ri_RangeTableIndex,
+									  estate->es_range_table);
+		TupleConversionMap *map;
+
+		map = convert_tuples_by_name(RelationGetDescr(rootRelInfo->ri_RelationDesc),
+									 RelationGetDescr(relinfo->ri_RelationDesc),
+									 gettext_noop("could not convert row type"));
+		if (map != NULL)
+			return execute_attr_map_cols(rte->updatedCols, map, rootRelInfo->ri_RelationDesc);
+=======
 		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
 
 		if (relinfo->ri_RootToPartitionMap != NULL)
 			return execute_attr_map_cols(relinfo->ri_RootToPartitionMap->attrMap,
 										 rte->updatedCols);
+>>>>>>> execUtils.c
 		else
 			return rte->updatedCols;
 	}

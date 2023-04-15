@@ -23,9 +23,13 @@
 
 #include "postgres.h"
 
+<<<<<<< ybcplan.c
+#include "access/htup_details.h"
+=======
 #include "optimizer/ybcplan.h"
 #include "access/htup_details.h"
 #include "access/relation.h"
+>>>>>>> ybcplan.c
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "executor/ybcExpr.h"
@@ -38,6 +42,9 @@
 #include "utils/syscache.h"
 #include "utils/lsyscache.h"
 
+/* YB includes. */
+#include "catalog/yb_catalog_version.h"
+#include "optimizer/ybcplan.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "pg_yb_utils.h"
 
@@ -75,12 +82,15 @@
  */
 static bool ModifyTableIsSingleRowWrite(ModifyTable *modifyTable)
 {
+<<<<<<< ybcplan.c
+=======
 #ifdef YB_TODO
 	/* YB_TODO(neil@yugabyte) Need to redo this work. Both sides were changed.
 	 * - NOTE work was done by Jayden.
 	 */
 	Plan *subplan;
 
+>>>>>>> ybcplan.c
 	/* Support INSERT, UPDATE, and DELETE. */
 	if (modifyTable->operation != CMD_INSERT &&
 		modifyTable->operation != CMD_UPDATE &&
@@ -104,7 +114,8 @@ static bool ModifyTableIsSingleRowWrite(ModifyTable *modifyTable)
 	if (list_length(modifyTable->plans) != 1)
 		return false;
 
-	plan = (Plan *) linitial(modifyTable->plans);
+	Plan *plan = (Plan *) linitial(modifyTable->plans);
+
 	/*
 	 * Only Result plan without a subplan produces single tuple without making
 	 * DocDB requests
@@ -186,12 +197,15 @@ bool YBCIsSingleRowModify(PlannedStmt *pstmt)
 }
 
 /*
- * Returns true if the following are all true:
- *  - is update or delete command.
+ * Returns true if this ModifyTable can be executed by a single RPC, without
+ * an initial table scan fetching a target tuple.
+ *
+ * Right now, this is true iff:
+ *  - it is UPDATE or DELETE command.
  *  - source data is a Result node (meaning we are skipping scan and thus
  *    are single row).
  */
-bool YBCIsSingleRowUpdateOrDelete(ModifyTable *modifyTable)
+bool YbCanSkipFetchingTargetTupleForModifyTable(ModifyTable *modifyTable)
 {
 	/* Support UPDATE and DELETE. */
 	if (modifyTable->operation != CMD_UPDATE &&

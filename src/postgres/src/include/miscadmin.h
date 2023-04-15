@@ -91,6 +91,11 @@ extern PGDLLIMPORT volatile sig_atomic_t InterruptPending;
 extern PGDLLIMPORT volatile sig_atomic_t QueryCancelPending;
 extern PGDLLIMPORT volatile sig_atomic_t ProcDiePending;
 extern PGDLLIMPORT volatile sig_atomic_t IdleInTransactionSessionTimeoutPending;
+<<<<<<< miscadmin.h
+extern PGDLLIMPORT volatile sig_atomic_t ConfigReloadPending;
+
+extern volatile sig_atomic_t ClientConnectionLost;
+=======
 extern PGDLLIMPORT volatile sig_atomic_t IdleSessionTimeoutPending;
 extern PGDLLIMPORT volatile sig_atomic_t ProcSignalBarrierPending;
 extern PGDLLIMPORT volatile sig_atomic_t LogMemoryContextPending;
@@ -98,6 +103,7 @@ extern PGDLLIMPORT volatile sig_atomic_t IdleStatsUpdateTimeoutPending;
 
 extern PGDLLIMPORT volatile sig_atomic_t CheckClientConnectionPending;
 extern PGDLLIMPORT volatile sig_atomic_t ClientConnectionLost;
+>>>>>>> miscadmin.h
 
 /* these are marked volatile because they are examined by signal handlers: */
 extern PGDLLIMPORT volatile uint32 InterruptHoldoffCount;
@@ -207,7 +213,11 @@ extern PGDLLIMPORT Oid MyDatabaseTableSpace;
 
 extern PGDLLIMPORT bool MyDatabaseColocated;
 
+extern PGDLLIMPORT bool MyColocatedDatabaseLegacy;
+
 extern PGDLLIMPORT bool YbTablegroupCatalogExists;
+
+extern PGDLLIMPORT bool YbLoginProfileCatalogsExist;
 
 /*
  * Date/Time Configuration

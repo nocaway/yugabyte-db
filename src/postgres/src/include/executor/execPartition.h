@@ -121,11 +121,40 @@ typedef struct PartitionPruneState
 	PartitionPruningData *partprunedata[FLEXIBLE_ARRAY_MEMBER];
 } PartitionPruneState;
 
+<<<<<<< execPartition.h
+extern PartitionTupleRouting *ExecSetupPartitionTupleRouting(ModifyTableState *mtstate,
+							   ResultRelInfo *rootResultRelInfo);
+extern int ExecFindPartition(ResultRelInfo *resultRelInfo,
+				  PartitionDispatch *pd,
+				  TupleTableSlot *slot,
+				  EState *estate);
+extern ResultRelInfo *ExecInitPartitionInfo(ModifyTableState *mtstate,
+					  ResultRelInfo *rootResultRelInfo,
+					  PartitionTupleRouting *proute,
+					  EState *estate, int partidx);
+extern void ExecInitRoutingInfo(ModifyTableState *mtstate,
+					EState *estate,
+					PartitionTupleRouting *proute,
+					ResultRelInfo *partRelInfo,
+					int partidx);
+extern void ExecSetupChildParentMapForLeaf(PartitionTupleRouting *proute);
+extern TupleConversionMap *TupConvMapForLeaf(PartitionTupleRouting *proute,
+				  ResultRelInfo *rootRelInfo, int leaf_index);
+extern void ExecCleanupTupleRouting(ModifyTableState *mtstate,
+						PartitionTupleRouting *proute);
+extern PartitionPruneState *ExecCreatePartitionPruneState(PlanState *planstate,
+							  PartitionPruneInfo *partitionpruneinfo);
+extern void ExecDestroyPartitionPruneState(PartitionPruneState *prunestate);
+extern Bitmapset *ExecFindMatchingSubPlans(PartitionPruneState *prunestate);
+extern Bitmapset *ExecFindInitialMatchingSubPlans(PartitionPruneState *prunestate,
+								int nsubplans);
+=======
 extern PartitionPruneState *ExecInitPartitionPruning(PlanState *planstate,
 													 int n_total_subplans,
 													 PartitionPruneInfo *pruneinfo,
 													 Bitmapset **initially_valid_subplans);
 extern Bitmapset *ExecFindMatchingSubPlans(PartitionPruneState *prunestate,
 										   bool initial_prune);
+>>>>>>> execPartition.h
 
 #endif							/* EXECPARTITION_H */

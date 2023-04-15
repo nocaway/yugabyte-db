@@ -298,10 +298,17 @@ static char *prepareGID;
  * Some commands want to force synchronous commit.
  */
 static bool forceSyncCommit = false;
+<<<<<<< xact.c
 
 /* Flag for logging statements in a transaction. */
 bool		xact_is_sampled = false;
 
+=======
+
+/* Flag for logging statements in a transaction. */
+bool		xact_is_sampled = false;
+
+>>>>>>> xact.c
 /*
  * Private context for transaction-abort work --- we reserve space for this
  * at startup to ensure that AbortTransaction and AbortSubTransaction can work
@@ -2106,6 +2113,7 @@ YBInitializeTransaction(void)
 			YBCPgSetTransactionIsolationLevel(YBGetEffectivePggateIsolationLevel()));
 		HandleYBStatus(YBCPgEnableFollowerReads(YBReadFromFollowersEnabled(), YBFollowerReadStalenessMs()));
 		HandleYBStatus(YBCPgSetTransactionReadOnly(XactReadOnly));
+		HandleYBStatus(YBCPgSetEnableTracing(YBEnableTracing()));
 		HandleYBStatus(YBCPgSetTransactionDeferrable(XactDeferrable));
 	}
 }
@@ -2142,7 +2150,11 @@ StartTransaction(void)
 	/* Determine if statements are logged in this transaction */
 	xact_is_sampled = log_xact_sample_rate != 0 &&
 		(log_xact_sample_rate == 1 ||
+<<<<<<< xact.c
+		 random() <= log_xact_sample_rate * MAX_RANDOM_VALUE);
+=======
 		 pg_prng_double(&pg_global_prng_state) <= log_xact_sample_rate);
+>>>>>>> xact.c
 
 	/*
 	 * initialize current transaction state fields
@@ -6567,53 +6579,6 @@ xact_redo(XLogReaderState *record)
 	}
 	else
 		elog(PANIC, "xact_redo: unknown op code %u", info);
-}
-
-/*
- * IsSubTransactionAssignmentPending
- *
- * This is used to decide whether we need to WAL log the top-level XID for
- * operation in a subtransaction.  We require that for logical decoding, see
- * LogicalDecodingProcessRecord.
- *
- * This returns true if wal_level >= logical and we are inside a valid
- * subtransaction, for which the assignment was not yet written to any WAL
- * record.
- */
-bool
-IsSubTransactionAssignmentPending(void)
-{
-	/* wal_level has to be logical */
-	if (!XLogLogicalInfoActive())
-		return false;
-
-	/* we need to be in a transaction state */
-	if (!IsTransactionState())
-		return false;
-
-	/* it has to be a subtransaction */
-	if (!IsSubTransaction())
-		return false;
-
-	/* the subtransaction has to have a XID assigned */
-	if (!TransactionIdIsValid(GetCurrentTransactionIdIfAny()))
-		return false;
-
-	/* and it should not be already 'assigned' */
-	return !CurrentTransactionState->assigned;
-}
-
-/*
- * MarkSubTransactionAssigned
- *
- * Mark the subtransaction assignment as completed.
- */
-void
-MarkSubTransactionAssigned(void)
-{
-	Assert(IsSubTransactionAssignmentPending());
-
-	CurrentTransactionState->assigned = true;
 }
 
 void YBSaveDdlHandle(YBCPgStatement handle)

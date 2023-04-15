@@ -250,7 +250,7 @@ recordDependencyOnCurrentExtension(const ObjectAddress *object,
  * shared_insert means that the record will be inserted in ALL databases.
  */
 void
-YBRecordPinDependency(const ObjectAddress *referenced, bool shared_insert)
+YbRecordPinDependency(const ObjectAddress *referenced, bool shared_insert)
 {
 	Relation	dependDesc;
 	CatalogIndexState indstate;
@@ -286,7 +286,14 @@ YBRecordPinDependency(const ObjectAddress *referenced, bool shared_insert)
 
 	CatalogCloseIndexes(indstate);
 
+<<<<<<< pg_depend.c
+	heap_close(dependDesc, RowExclusiveLock);
+
+	YbPinObjectIfNeeded(referenced->classId, referenced->objectId,
+						false /* shared_dependency */);
+=======
 	table_close(dependDesc, RowExclusiveLock);
+>>>>>>> pg_depend.c
 }
 
 /*
@@ -601,6 +608,24 @@ changeDependencyFor(Oid classId, Oid objectId,
 }
 
 /*
+<<<<<<< pg_depend.c
+ * isObjectPinned()
+ *
+ * Test if an object is required for basic database functionality.
+ * Caller must already have opened pg_depend.
+ *
+ * The passed subId, if any, is ignored; we assume that only whole objects
+ * are pinned (and that this implies pinning their components).
+ */
+static bool
+isObjectPinned(const ObjectAddress *object, Relation rel)
+{
+	if (IsYugaByteEnabled() && !YBCIsInitDbModeEnvVarSet())
+		return YbIsObjectPinned(object->classId, object->objectId,
+								false /* shared_dependency */);
+
+	bool		ret = false;
+=======
  * Adjust all dependency records to come from a different object of the same type
  *
  * classId/oldObjectId specify the old referencing object.
@@ -615,6 +640,7 @@ changeDependenciesOf(Oid classId, Oid oldObjectId,
 	long		count = 0;
 	Relation	depRel;
 	ScanKeyData key[2];
+>>>>>>> pg_depend.c
 	SysScanDesc scan;
 	HeapTuple	tup;
 

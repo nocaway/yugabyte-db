@@ -1545,11 +1545,25 @@ ParallelWorkerReportLastRecEnd(XLogRecPtr last_xlog_end)
 static void
 ParallelWorkerShutdown(int code, Datum arg)
 {
+<<<<<<< parallel.c
+	/*
+	 * We currently do not support parallel workers, and if we do, we will need to
+	 * enable this behaviour in reaper as well to wrap up any leftovers from suddenly
+	 * terminated processes.
+	 */
+	elog(ERROR, "ParallelWorkers are not supported");
+	Assert(false);
+
+	SendProcSignal(ParallelMasterPid,
+				   PROCSIG_PARALLEL_MESSAGE,
+				   ParallelMasterBackendId);
+=======
 	SendProcSignal(ParallelLeaderPid,
 				   PROCSIG_PARALLEL_MESSAGE,
 				   ParallelLeaderBackendId);
 
 	dsm_detach((dsm_segment *) DatumGetPointer(arg));
+>>>>>>> parallel.c
 }
 
 /*

@@ -32,6 +32,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
+# yb_original_stdout = sys.stdout
 sys.stdout = codecs.getwriter('utf8')(sys.stdout.buffer)
 
 # The ranges of Unicode characters that we consider to be "plain letters".
@@ -284,3 +285,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     main(args)
+
+# Doctest throws the following error unless sys.stdout is restored:
+#   AttributeError: '_io.BufferedWriter' object has no attribute 'encoding'
+# sys.stdout = yb_original_stdout

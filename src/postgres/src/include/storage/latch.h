@@ -158,6 +158,15 @@ typedef struct WaitEventSet WaitEventSet;
  * prototypes for functions in latch.c
  */
 extern void InitializeLatchSupport(void);
+<<<<<<< latch.h
+extern void InitLatch(volatile Latch *latch);
+extern void InitSharedLatch(volatile Latch *latch);
+extern void OwnLatch(volatile Latch *latch);
+extern void DisownLatch(volatile Latch *latch);
+extern void DisownLatchOnBehalfOfPid(volatile Latch *latch, int owner_pid);
+extern void SetLatch(volatile Latch *latch);
+extern void ResetLatch(volatile Latch *latch);
+=======
 extern void InitLatch(Latch *latch);
 extern void InitSharedLatch(Latch *latch);
 extern void OwnLatch(Latch *latch);
@@ -165,6 +174,7 @@ extern void DisownLatch(Latch *latch);
 extern void SetLatch(Latch *latch);
 extern void ResetLatch(Latch *latch);
 extern void ShutdownLatchSupport(void);
+>>>>>>> latch.h
 
 extern WaitEventSet *CreateWaitEventSet(MemoryContext context, int nevents);
 extern void FreeWaitEventSet(WaitEventSet *set);

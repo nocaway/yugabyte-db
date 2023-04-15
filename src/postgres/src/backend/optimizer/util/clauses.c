@@ -131,6 +131,281 @@ static List *add_function_defaults(List *args, int pronargs,
 								   HeapTuple func_tuple);
 static List *fetch_function_defaults(HeapTuple func_tuple);
 static void recheck_cast_function_args(List *args, Oid result_type,
+<<<<<<< clauses.c
+						   HeapTuple func_tuple);
+static Expr *evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
+				  Oid result_collid, Oid input_collid, List *args,
+				  bool funcvariadic,
+				  HeapTuple func_tuple,
+				  eval_const_expressions_context *context);
+static Expr *inline_function(Oid funcid, Oid result_type, Oid result_collid,
+				Oid input_collid, List *args,
+				bool funcvariadic,
+				HeapTuple func_tuple,
+				eval_const_expressions_context *context);
+static Node *substitute_actual_parameters(Node *expr, int nargs, List *args,
+							 int *usecounts);
+static Node *substitute_actual_parameters_mutator(Node *node,
+									 substitute_actual_parameters_context *context);
+static void sql_inline_error_callback(void *arg);
+static Expr *evaluate_expr(Expr *expr, Oid result_type, int32 result_typmod,
+			  Oid result_collation);
+static Query *substitute_actual_srf_parameters(Query *expr,
+								 int nargs, List *args);
+static Node *substitute_actual_srf_parameters_mutator(Node *node,
+										 substitute_actual_srf_parameters_context *context);
+static bool tlist_matches_coltypelist(List *tlist, List *coltypelist);
+
+
+/*****************************************************************************
+ *		OPERATOR clause functions
+ *****************************************************************************/
+
+/*
+ * make_opclause
+ *	  Creates an operator clause given its operator info, left operand
+ *	  and right operand (pass NULL to create single-operand clause),
+ *	  and collation info.
+ */
+Expr *
+make_opclause(Oid opno, Oid opresulttype, bool opretset,
+			  Expr *leftop, Expr *rightop,
+			  Oid opcollid, Oid inputcollid)
+{
+	OpExpr	   *expr = makeNode(OpExpr);
+
+	expr->opno = opno;
+	expr->opfuncid = InvalidOid;
+	expr->opresulttype = opresulttype;
+	expr->opretset = opretset;
+	expr->opcollid = opcollid;
+	expr->inputcollid = inputcollid;
+	if (rightop)
+		expr->args = list_make2(leftop, rightop);
+	else
+		expr->args = list_make1(leftop);
+	expr->location = -1;
+	return (Expr *) expr;
+}
+
+/*
+ * get_leftop
+ *
+ * Returns the left operand of a clause of the form (op expr expr)
+ *		or (op expr)
+ */
+Node *
+get_leftop(const Expr *clause)
+{
+	const OpExpr *expr = (const OpExpr *) clause;
+
+	if (expr->args != NIL)
+		return linitial(expr->args);
+	else
+		return NULL;
+}
+
+/*
+ * get_rightop
+ *
+ * Returns the right operand in a clause of the form (op expr expr).
+ * NB: result will be NULL if applied to a unary op clause.
+ */
+Node *
+get_rightop(const Expr *clause)
+{
+	const OpExpr *expr = (const OpExpr *) clause;
+
+	if (list_length(expr->args) >= 2)
+		return lsecond(expr->args);
+	else
+		return NULL;
+}
+
+/*****************************************************************************
+ *		ScalarArrayOperator clause functions
+ *****************************************************************************/
+
+Node *
+yb_get_saop_left_op(const Expr *clause)
+{
+	const ScalarArrayOpExpr *expr = (const ScalarArrayOpExpr *) clause;
+
+	return linitial(expr->args);
+}
+
+/*****************************************************************************
+ *		NOT clause functions
+ *****************************************************************************/
+
+/*
+ * not_clause
+ *
+ * Returns t iff this is a 'not' clause: (NOT expr).
+ */
+bool
+not_clause(Node *clause)
+{
+	return (clause != NULL &&
+			IsA(clause, BoolExpr) &&
+			((BoolExpr *) clause)->boolop == NOT_EXPR);
+}
+
+/*
+ * make_notclause
+ *
+ * Create a 'not' clause given the expression to be negated.
+ */
+Expr *
+make_notclause(Expr *notclause)
+{
+	BoolExpr   *expr = makeNode(BoolExpr);
+
+	expr->boolop = NOT_EXPR;
+	expr->args = list_make1(notclause);
+	expr->location = -1;
+	return (Expr *) expr;
+}
+
+/*
+ * get_notclausearg
+ *
+ * Retrieve the clause within a 'not' clause
+ */
+Expr *
+get_notclausearg(Expr *notclause)
+{
+	return linitial(((BoolExpr *) notclause)->args);
+}
+
+/*****************************************************************************
+ *		OR clause functions
+ *****************************************************************************/
+
+/*
+ * or_clause
+ *
+ * Returns t iff the clause is an 'or' clause: (OR { expr }).
+ */
+bool
+or_clause(Node *clause)
+{
+	return (clause != NULL &&
+			IsA(clause, BoolExpr) &&
+			((BoolExpr *) clause)->boolop == OR_EXPR);
+}
+
+/*
+ * make_orclause
+ *
+ * Creates an 'or' clause given a list of its subclauses.
+ */
+Expr *
+make_orclause(List *orclauses)
+{
+	BoolExpr   *expr = makeNode(BoolExpr);
+
+	expr->boolop = OR_EXPR;
+	expr->args = orclauses;
+	expr->location = -1;
+	return (Expr *) expr;
+}
+
+/*****************************************************************************
+ *		AND clause functions
+ *****************************************************************************/
+
+
+/*
+ * and_clause
+ *
+ * Returns t iff its argument is an 'and' clause: (AND { expr }).
+ */
+bool
+and_clause(Node *clause)
+{
+	return (clause != NULL &&
+			IsA(clause, BoolExpr) &&
+			((BoolExpr *) clause)->boolop == AND_EXPR);
+}
+
+/*
+ * make_andclause
+ *
+ * Creates an 'and' clause given a list of its subclauses.
+ */
+Expr *
+make_andclause(List *andclauses)
+{
+	BoolExpr   *expr = makeNode(BoolExpr);
+
+	expr->boolop = AND_EXPR;
+	expr->args = andclauses;
+	expr->location = -1;
+	return (Expr *) expr;
+}
+
+/*
+ * make_and_qual
+ *
+ * Variant of make_andclause for ANDing two qual conditions together.
+ * Qual conditions have the property that a NULL nodetree is interpreted
+ * as 'true'.
+ *
+ * NB: this makes no attempt to preserve AND/OR flatness; so it should not
+ * be used on a qual that has already been run through prepqual.c.
+ */
+Node *
+make_and_qual(Node *qual1, Node *qual2)
+{
+	if (qual1 == NULL)
+		return qual2;
+	if (qual2 == NULL)
+		return qual1;
+	return (Node *) make_andclause(list_make2(qual1, qual2));
+}
+
+/*
+ * The planner frequently prefers to represent qualification expressions
+ * as lists of boolean expressions with implicit AND semantics.
+ *
+ * These functions convert between an AND-semantics expression list and the
+ * ordinary representation of a boolean expression.
+ *
+ * Note that an empty list is considered equivalent to TRUE.
+ */
+Expr *
+make_ands_explicit(List *andclauses)
+{
+	if (andclauses == NIL)
+		return (Expr *) makeBoolConst(true, false);
+	else if (list_length(andclauses) == 1)
+		return (Expr *) linitial(andclauses);
+	else
+		return make_andclause(andclauses);
+}
+
+List *
+make_ands_implicit(Expr *clause)
+{
+	/*
+	 * NB: because the parser sets the qual field to NULL in a query that has
+	 * no WHERE clause, we must consider a NULL input clause as TRUE, even
+	 * though one might more reasonably think it FALSE.  Grumble. If this
+	 * causes trouble, consider changing the parser's behavior.
+	 */
+	if (clause == NULL)
+		return NIL;				/* NULL -> NIL list == TRUE */
+	else if (and_clause((Node *) clause))
+		return ((BoolExpr *) clause)->args;
+	else if (IsA(clause, Const) &&
+			 !((Const *) clause)->constisnull &&
+			 DatumGetBool(((Const *) clause)->constvalue))
+		return NIL;				/* constant TRUE input -> NIL list */
+	else
+		return list_make1(clause);
+}
+=======
 									   Oid *proargtypes, int pronargs,
 									   HeapTuple func_tuple);
 static Expr *evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
@@ -153,6 +428,7 @@ static Query *substitute_actual_srf_parameters(Query *expr,
 static Node *substitute_actual_srf_parameters_mutator(Node *node,
 													  substitute_actual_srf_parameters_context *context);
 static bool pull_paramids_walker(Node *node, Bitmapset **context);
+>>>>>>> clauses.c
 
 
 /*****************************************************************************
@@ -5260,8 +5536,11 @@ typedef struct replace_varnos_context
 } replace_varnos_context;
 
 static Node *yb_copy_replace_varnos_mutator(Node *node,
-							   replace_varnos_context *context)
+							   				replace_varnos_context *context)
 {
+	if (node == NULL)
+		return NULL;
+
 	if (IsA(node, Var))
 	{
 		Var *var = (Var *) node;

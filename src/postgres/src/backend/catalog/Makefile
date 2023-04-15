@@ -71,6 +71,21 @@ CATALOG_HEADERS := \
 	pg_foreign_data_wrapper.h pg_foreign_server.h pg_user_mapping.h \
 	pg_foreign_table.h pg_policy.h pg_replication_origin.h \
 	pg_default_acl.h pg_init_privs.h pg_seclabel.h pg_shseclabel.h \
+<<<<<<< Makefile
+	pg_collation.h pg_partitioned_table.h pg_range.h pg_transform.h \
+	pg_sequence.h pg_publication.h pg_publication_rel.h pg_subscription.h \
+	pg_subscription_rel.h pg_yb_catalog_version.h pg_yb_migration.h \
+	pg_yb_profile.h pg_yb_role_profile.h pg_yb_tablegroup.h
+
+GENERATED_HEADERS := $(CATALOG_HEADERS:%.h=%_d.h) schemapg.h
+
+# In the list of headers used to assemble postgres.bki, indexing.h needs
+# be last, and toasting.h just before it.  This ensures we don't try to
+# create indexes or toast tables before their catalogs exist.
+POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/,\
+	$(CATALOG_HEADERS) toasting.h indexing.h \
+	)
+=======
 	pg_collation.h pg_parameter_acl.h pg_partitioned_table.h \
 	pg_range.h pg_transform.h \
 	pg_sequence.h pg_publication.h pg_publication_namespace.h \
@@ -80,6 +95,7 @@ CATALOG_HEADERS := \
 GENERATED_HEADERS := $(CATALOG_HEADERS:%.h=%_d.h) schemapg.h system_fk_info.h
 
 POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, $(CATALOG_HEADERS))
+>>>>>>> Makefile
 
 # The .dat files we need can just be listed alphabetically.
 POSTGRES_BKI_DATA = $(addprefix $(top_srcdir)/src/include/catalog/,\

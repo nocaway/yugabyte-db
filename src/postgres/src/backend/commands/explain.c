@@ -234,7 +234,14 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt,
 					 parser_errposition(pstate, opt->location)));
 	}
 
+<<<<<<< explain.c
+	if (es->analyze)
+		yb_run_with_explain_analyze = true;
+
+	if (es->buffers && !es->analyze)
+=======
 	if (es->wal && !es->analyze)
+>>>>>>> explain.c
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("EXPLAIN option WAL requires ANALYZE")));
@@ -2385,7 +2392,12 @@ show_expression(Node *node, const char *qlabel,
 									   ancestors);
 
 	/* Deparse the expression */
-	exprstr = deparse_expression(node, context, useprefix, false);
+	if (YBCPgIsYugaByteEnabled())
+		exprstr =
+			yb_deparse_expression(node, context, useprefix, false,
+								  es->verbose);
+	else
+		exprstr = deparse_expression(node, context, useprefix, false);
 
 	/* And add to es->str */
 	ExplainPropertyText(qlabel, exprstr, es);

@@ -32,9 +32,21 @@
 #include "utils/inet.h"
 #include "utils/timestamp.h"
 
+/* YB includes */
+#include "commands/progress.h"
+
 #define UINT32_ACCESS_ONCE(var)		 ((uint32)(*((volatile uint32 *)&(var))))
 
+<<<<<<< pgstatfuncs.c
+/* Global bgwriter statistics, from bgwriter.c */
+extern PgStat_MsgBgWriter bgwriterStats;
+
+extern bool yb_retrieved_concurrent_index_progress;
+
+uint64_t *yb_pg_stat_retrieve_concurrent_index_progress();
+=======
 #define HAS_PGSTAT_PERMISSIONS(role)	 (has_privs_of_role(GetUserId(), ROLE_PG_READ_ALL_STATS) || has_privs_of_role(GetUserId(), role))
+>>>>>>> pgstatfuncs.c
 
 Datum
 pg_stat_get_numscans(PG_FUNCTION_ARGS)
@@ -461,8 +473,34 @@ pg_stat_get_progress_info(PG_FUNCTION_ARGS)
 	int			curr_backend;
 	char	   *cmd = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	ProgressCommandType cmdtype;
+<<<<<<< pgstatfuncs.c
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	MemoryContext per_query_ctx;
+	MemoryContext oldcontext;
+	uint64_t *index_progress = NULL;
+	uint64_t *index_progress_iterator = NULL;
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not " \
+						"allowed in this context")));
+
+	/* Build a tuple descriptor for our result type */
+	if (get_call_result_type(fcinfo, NULL, &tupdesc) != TYPEFUNC_COMPOSITE)
+		elog(ERROR, "return type must be a row type");
+
+=======
 	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 
+>>>>>>> pgstatfuncs.c
 	/* Translate command name into command type code. */
 	if (pg_strcasecmp(cmd, "VACUUM") == 0)
 		cmdtype = PROGRESS_COMMAND_VACUUM;
@@ -476,12 +514,46 @@ pg_stat_get_progress_info(PG_FUNCTION_ARGS)
 		cmdtype = PROGRESS_COMMAND_BASEBACKUP;
 	else if (pg_strcasecmp(cmd, "COPY") == 0)
 		cmdtype = PROGRESS_COMMAND_COPY;
+	else if (pg_strcasecmp(cmd, "CREATE INDEX") == 0)
+		cmdtype = PROGRESS_COMMAND_CREATE_INDEX;
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid command name: \"%s\"", cmd)));
 
+<<<<<<< pgstatfuncs.c
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+	MemoryContextSwitchTo(oldcontext);
+
+	/*
+	 * Fetch stats for in-progress concurrent create indexes that aren't
+	 * captured in the local backend entry from master. We avoid reading these
+	 * stats while constructing the local backend entry in
+	 * pg_read_current_stats() in order to avoid extraneous RPCs to master
+	 * (in case we read from pg_stat_* views within a transaction but don't
+	 * read from pg_stat_progress_create_index). Since these stats are computed
+	 * on the fly and not at the time of pg_read_current_stats(), they may not
+	 * be consistent with other backend stats.
+	 * Also, the fetched values are constant within a transaction - we only
+	 * fetch from master if we haven't already done so within the current
+	 * transaction.
+	 */
+	if (IsYugaByteEnabled() && cmdtype == PROGRESS_COMMAND_CREATE_INDEX &&
+		!yb_retrieved_concurrent_index_progress)
+	{
+		index_progress = yb_pg_stat_retrieve_concurrent_index_progress();
+		index_progress_iterator = index_progress;
+		yb_retrieved_concurrent_index_progress = true;
+	}
+=======
 	InitMaterializedSRF(fcinfo, 0);
+>>>>>>> pgstatfuncs.c
 
 	/* 1-based index */
 	for (curr_backend = 1; curr_backend <= num_backends; curr_backend++)
@@ -510,6 +582,29 @@ pg_stat_get_progress_info(PG_FUNCTION_ARGS)
 						beentry->st_progress_command != PROGRESS_COMMAND_COPY))
 			continue;
 
+		/*
+		 * Fill in tuples_done for concurrent create indexes on YB relations
+		 * that are in the backfilling phase.
+		 */
+		if (IsYugaByteEnabled() && cmdtype == PROGRESS_COMMAND_CREATE_INDEX &&
+			(beentry->st_progress_param[PROGRESS_CREATEIDX_COMMAND]
+			 == PROGRESS_CREATEIDX_COMMAND_CREATE_CONCURRENTLY) &&
+			(beentry->st_progress_param[PROGRESS_CREATEIDX_PHASE]
+			 == YB_PROGRESS_CREATEIDX_BACKFILLING) &&
+			IsYBRelationById(beentry->st_progress_command_target) &&
+			index_progress_iterator)
+		{
+			/*
+			 * Note: we expect the ordering of the indexes in index_progress to
+			 * to match the ordering within the backend status array -
+			 * therefore we don't need to loop through index_progress to find
+			 * the relevant entry
+			 */
+			beentry->st_progress_param[PROGRESS_CREATEIDX_TUPLES_DONE]
+				= *index_progress_iterator;
+			index_progress_iterator++;
+		}
+
 		/* Value available to all callers */
 		values[0] = Int32GetDatum(beentry->st_procpid);
 		values[1] = ObjectIdGetDatum(beentry->st_databaseid);
@@ -528,9 +623,48 @@ pg_stat_get_progress_info(PG_FUNCTION_ARGS)
 				nulls[i + 3] = true;
 		}
 
+<<<<<<< pgstatfuncs.c
+		/*
+		 * Set the columns of pg_stat_progress_create_index that are unused
+		 * in YB to null.
+		 */
+		if (IsYugaByteEnabled() && cmdtype == PROGRESS_COMMAND_CREATE_INDEX)
+		{
+			for (i = 0; i < PGSTAT_NUM_PROGRESS_PARAM; i++)
+			{
+				/*
+				 * In YB, we only use the command, index_relid, phase,
+				 * tuples_total, tuples_done, partitions_total, partitions_done
+				 * columns for YB indexes. For temp indexes, tuples_total and
+				 * tuples_done aren't computed so we set those to null too.
+				 */
+				if (i == PROGRESS_CREATEIDX_COMMAND ||
+					i == PROGRESS_CREATEIDX_INDEX_OID ||
+					i == PROGRESS_CREATEIDX_PHASE ||
+					i == PROGRESS_CREATEIDX_PARTITIONS_TOTAL ||
+					i == PROGRESS_CREATEIDX_PARTITIONS_DONE ||
+					(IsYBRelationById(beentry->st_progress_command_target) &&
+					 (i == PROGRESS_CREATEIDX_TUPLES_TOTAL ||
+					  i == PROGRESS_CREATEIDX_TUPLES_DONE)))
+					continue;
+				nulls[i + 3] = true;
+			}
+		}
+
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
+	if (index_progress)
+		pfree(index_progress);
+
+	/* clean up and return the tuplestore */
+	tuplestore_donestoring(tupstore);
+
+=======
 		tuplestore_putvalues(rsinfo->setResult, rsinfo->setDesc, values, nulls);
 	}
 
+>>>>>>> pgstatfuncs.c
 	return (Datum) 0;
 }
 
@@ -1131,7 +1265,7 @@ pg_stat_get_backend_client_addr(PG_FUNCTION_ARGS)
 
 	clean_ipv6_addr(beentry->st_clientaddr.addr.ss_family, remote_host);
 
-	PG_RETURN_INET_P(DirectFunctionCall1(inet_in,
+	PG_RETURN_DATUM(DirectFunctionCall1(inet_in,
 										 CStringGetDatum(remote_host)));
 }
 
@@ -1182,6 +1316,21 @@ pg_stat_get_backend_client_port(PG_FUNCTION_ARGS)
 										CStringGetDatum(remote_port)));
 }
 
+Datum
+yb_pg_stat_get_backend_catalog_version(PG_FUNCTION_ARGS)
+{
+	int32		beid = PG_GETARG_INT32(0);
+	PgBackendStatus *beentry;
+
+	if ((beentry = pgstat_fetch_stat_beentry(beid)) == NULL)
+		PG_RETURN_NULL();
+
+	if (beentry->yb_st_catalog_version.has_version)
+		PG_RETURN_DATUM(UInt64GetDatum(beentry->yb_st_catalog_version.version));
+	else
+		PG_RETURN_NULL();
+}
+
 
 Datum
 pg_stat_get_db_numbackends(PG_FUNCTION_ARGS)
@@ -1214,7 +1363,6 @@ Datum
 yb_pg_stat_get_queries(PG_FUNCTION_ARGS)
 {
 	#define PG_YBSTAT_TERMINATED_QUERIES_COLS 6
-	Oid			db_oid = PG_ARGISNULL(0) ? -1 : PG_GETARG_OID(0);
 	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 	TupleDesc	tupdesc;
 	Tuplestorestate *tupstore;
@@ -1244,6 +1392,9 @@ yb_pg_stat_get_queries(PG_FUNCTION_ARGS)
 
 	MemoryContextSwitchTo(oldcontext);
 
+#ifdef YB_TODO
+	/* YB_TODO() Yugabyte needs new implementation for stats */
+	Oid			db_oid = PG_ARGISNULL(0) ? -1 : PG_GETARG_OID(0);
 	size_t num_queries = 0;
 	PgStat_YBStatQueryEntry *queries = pgstat_fetch_ybstat_queries(db_oid, &num_queries);
 	for (size_t i = 0; i < num_queries; i++)
@@ -1270,6 +1421,7 @@ yb_pg_stat_get_queries(PG_FUNCTION_ARGS)
 		else
 			continue;
 	}
+#endif
 
 	tuplestore_donestoring(tupstore);
 
@@ -2411,6 +2563,96 @@ pg_stat_get_replication_slot(PG_FUNCTION_ARGS)
 	PG_RETURN_DATUM(HeapTupleGetDatum(heap_form_tuple(tupdesc, values, nulls)));
 }
 
+<<<<<<< pgstatfuncs.c
+/* Returns backend_allocated_mem_bytes from the process's beid */
+Datum
+yb_pg_stat_get_backend_allocated_mem_bytes(PG_FUNCTION_ARGS)
+{
+	if (!yb_enable_memory_tracking)
+		PG_RETURN_NULL();
+
+	int32		beid = PG_GETARG_INT32(0);
+	int64		result;
+	PgBackendStatus *beentry;
+
+	if ((beentry = pgstat_fetch_stat_beentry(beid)) == NULL)
+		PG_RETURN_NULL();
+
+	result = beentry->yb_st_allocated_mem_bytes;
+
+	PG_RETURN_INT64(result);
+}
+
+/* Returns rss_mem_bytes from the process's beid */
+Datum
+yb_pg_stat_get_backend_rss_mem_bytes(PG_FUNCTION_ARGS)
+{
+	if (!yb_enable_memory_tracking)
+		PG_RETURN_NULL();
+
+	int32		beid = PG_GETARG_INT32(0);
+	int64		result;
+	LocalPgBackendStatus *local_beentry;
+
+	if ((local_beentry = pgstat_fetch_stat_local_beentry(beid)) == NULL)
+		PG_RETURN_NULL();
+
+	result = local_beentry->yb_backend_rss_mem_bytes;
+
+	PG_RETURN_INT64(result);
+}
+
+/*
+ * In YB, this function is used to retrieve stats for in-progress concurrent
+ * CREATE INDEX from master.
+ */
+uint64_t *
+yb_pg_stat_retrieve_concurrent_index_progress()
+{
+	int			num_backends = pgstat_fetch_stat_numbackends();
+	int			curr_backend;
+	int			num_indexes = 0;
+	Oid			database_oids[num_backends];
+	Oid			index_oids[num_backends];
+	uint64_t	*progress = NULL;
+
+	for (curr_backend = 1; curr_backend <= num_backends; curr_backend++)
+	{
+		PgBackendStatus *beentry;
+		LocalPgBackendStatus *local_beentry;
+		local_beentry = pgstat_fetch_stat_local_beentry(curr_backend);
+
+		if (!local_beentry)
+			continue;
+
+		beentry = &local_beentry->backendStatus;
+
+		/*
+		 * Filter out commands besides concurrent create indexes on YB
+		 * relations that are in the backfilling phase.
+		 */
+		if (beentry->st_progress_command != PROGRESS_COMMAND_CREATE_INDEX ||
+			(beentry->st_progress_param[PROGRESS_CREATEIDX_COMMAND]
+			 != PROGRESS_CREATEIDX_COMMAND_CREATE_CONCURRENTLY) ||
+			(beentry->st_progress_param[PROGRESS_CREATEIDX_PHASE]
+			 < YB_PROGRESS_CREATEIDX_BACKFILLING) ||
+			!IsYBRelationById(beentry->st_progress_command_target))
+			continue;
+
+		database_oids[num_indexes] = beentry->st_databaseid;
+		index_oids[num_indexes++] =
+			beentry->st_progress_param[PROGRESS_CREATEIDX_INDEX_OID];
+	}
+
+	if (num_indexes > 0)
+	{
+		progress = palloc(sizeof(uint64_t) * num_indexes);
+		HandleYBStatus(YBCGetIndexBackfillProgress(index_oids, database_oids,
+												   &progress, num_indexes));
+	}
+
+	return progress;
+=======
 /*
  * Get the subscription statistics for the given subscription. If the
  * subscription statistics is not available, return all-zeros stats.
@@ -2487,4 +2729,5 @@ pg_stat_have_stats(PG_FUNCTION_ARGS)
 	PgStat_Kind kind = pgstat_get_kind_from_str(stats_type);
 
 	PG_RETURN_BOOL(pgstat_have_entry(kind, dboid, objoid));
+>>>>>>> pgstatfuncs.c
 }

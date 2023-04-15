@@ -434,9 +434,14 @@ OwnLatch(Latch *latch)
 	Assert(signal_fd >= 0);
 #endif
 
+<<<<<<< latch.c
+	if (latch->owner_pid != 0)
+		elog(ERROR, "latch already owned by %d", latch->owner_pid);
+=======
 	owner_pid = latch->owner_pid;
 	if (owner_pid != 0)
 		elog(PANIC, "latch already owned by PID %d", owner_pid);
+>>>>>>> latch.c
 
 	latch->owner_pid = MyProcPid;
 }
@@ -449,6 +454,20 @@ DisownLatch(Latch *latch)
 {
 	Assert(latch->is_shared);
 	Assert(latch->owner_pid == MyProcPid);
+
+	latch->owner_pid = 0;
+}
+
+/*
+ * Disown a shared latch currently owned by the given process.
+ * This is useful in the event that a process was killed
+ * without being able to release its latch (for example, OOM)
+ */
+void
+DisownLatchOnBehalfOfPid(volatile Latch *latch, int owner_pid)
+{
+	Assert(latch->is_shared);
+	Assert(latch->owner_pid == owner_pid);
 
 	latch->owner_pid = 0;
 }

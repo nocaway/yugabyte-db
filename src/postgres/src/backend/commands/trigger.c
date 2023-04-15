@@ -2931,10 +2931,14 @@ ExecBSUpdateTriggers(EState *estate, ResultRelInfo *relinfo)
 								   CMD_UPDATE))
 		return;
 
+<<<<<<< trigger.c
+	updatedCols = ExecGetUpdatedCols(relinfo, estate);
+=======
 	/* statement-level triggers operate on the parent table */
 	Assert(relinfo->ri_RootResultRelInfo == NULL);
 
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
+>>>>>>> trigger.c
 
 	LocTriggerData.type = T_TriggerData;
 	LocTriggerData.tg_event = TRIGGER_EVENT_UPDATE |
@@ -2979,12 +2983,19 @@ ExecASUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 	Assert(relinfo->ri_RootResultRelInfo == NULL);
 
 	if (trigdesc && trigdesc->trig_update_after_statement)
+<<<<<<< trigger.c
+		AfterTriggerSaveEvent(estate, relinfo, TRIGGER_EVENT_UPDATE,
+							  false, NULL, NULL, NIL,
+							  ExecGetUpdatedCols(relinfo, estate),
+							  transition_capture);
+=======
 		AfterTriggerSaveEvent(estate, relinfo, NULL, NULL,
 							  TRIGGER_EVENT_UPDATE,
 							  false, NULL, NULL, NIL,
 							  ExecGetAllUpdatedCols(relinfo, estate),
 							  transition_capture,
 							  false);
+>>>>>>> trigger.c
 }
 
 bool
@@ -3057,8 +3068,14 @@ ExecBRUpdateTriggers(EState *estate, EPQState *epqstate,
 		TRIGGER_EVENT_ROW |
 		TRIGGER_EVENT_BEFORE;
 	LocTriggerData.tg_relation = relinfo->ri_RelationDesc;
+<<<<<<< trigger.c
+	LocTriggerData.tg_oldtable = NULL;
+	LocTriggerData.tg_newtable = NULL;
+	updatedCols = ExecGetUpdatedCols(relinfo, estate);
+=======
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
 	LocTriggerData.tg_updatedcols = updatedCols;
+>>>>>>> trigger.c
 	for (i = 0; i < trigdesc->numtriggers; i++)
 	{
 		Trigger    *trigger = &trigdesc->triggers[i];
@@ -3155,6 +3172,24 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 		 * separately for DELETE and INSERT to capture transition table rows.
 		 * In such case, either old tuple or new tuple can be NULL.
 		 */
+<<<<<<< trigger.c
+		if (fdw_trigtuple == NULL && ItemPointerIsValid(tupleid))
+			trigtuple = GetTupleForTrigger(estate,
+										   NULL,
+										   relinfo,
+										   tupleid,
+										   LockTupleExclusive,
+										   NULL);
+		else
+			trigtuple = fdw_trigtuple;
+
+		AfterTriggerSaveEvent(estate, relinfo, TRIGGER_EVENT_UPDATE,
+							  true, trigtuple, newtuple, recheckIndexes,
+							  ExecGetUpdatedCols(relinfo, estate),
+							  transition_capture);
+		if (trigtuple != fdw_trigtuple)
+			heap_freetuple(trigtuple);
+=======
 		TupleTableSlot *oldslot;
 		ResultRelInfo *tupsrc;
 
@@ -3186,6 +3221,7 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 							  ExecGetAllUpdatedCols(relinfo, estate),
 							  transition_capture,
 							  is_crosspart_update);
+>>>>>>> trigger.c
 	}
 }
 
@@ -3944,34 +3980,43 @@ static bool afterTriggerCheckState(AfterTriggerShared evtshared);
 static Tuplestorestate *
 GetCurrentFDWTuplestore(AfterTriggerShared evtshared)
 {
-	Tuplestorestate *ret;
-
-	/* Check trigger has subtransaction level tuplestore (deferred trigger). */
+	/* Check trigger has transaction level tuplestore (deferred trigger). */
 	if (evtshared->ybc_txn_fdw_tuplestore)
 		return evtshared->ybc_txn_fdw_tuplestore;
 
 	Assert(afterTriggers.query_depth > -1);
-	AfterTriggersQueryData* trigger_data = &afterTriggers.query_stack[afterTriggers.query_depth];
+	AfterTriggersQueryData *trigger_data = &afterTriggers.query_stack[afterTriggers.query_depth];
 	const bool is_deferred = IsYugaByteEnabled() && afterTriggerCheckState(evtshared);
-	ret = is_deferred ? trigger_data->ybc_txn_fdw_tuplestore : trigger_data->fdw_tuplestore;
+	Tuplestorestate *ret = is_deferred ? trigger_data->ybc_txn_fdw_tuplestore
+									   : trigger_data->fdw_tuplestore;
 	if (ret == NULL)
 	{
 		/*
 		 * Make the tuplestore valid until end of subtransaction.  We really
 		 * only need it until AfterTriggerEndQuery().
-		 * In YugaByte mode deferred trigger will access tuplestore
-		 * at the end of subtransaction (after AfterTriggerEndQuery).
+		 * If deferred, it needs to live longer, as the deferred triggers are
+		 * fired at the end of the top transaction.
 		 */
-		MemoryContext oldcxt = MemoryContextSwitchTo(CurTransactionContext);
+		MemoryContext oldcxt;
 		ResourceOwner saveResourceOwner = CurrentResourceOwner;
-		CurrentResourceOwner = CurTransactionResourceOwner;
+		if (is_deferred)
+		{
+			oldcxt = MemoryContextSwitchTo(TopTransactionContext);
+			CurrentResourceOwner = TopTransactionResourceOwner;
+		}
+		else
+		{
+			oldcxt = MemoryContextSwitchTo(CurTransactionContext);
+			CurrentResourceOwner = CurTransactionResourceOwner;
+		}
 
 		ret = tuplestore_begin_heap(false, false, work_mem);
 
 		if (is_deferred)
 		{
 			trigger_data->ybc_txn_fdw_tuplestore = ret;
-			afterTriggers.ybc_txn_fdw_tuplestores = lappend(afterTriggers.ybc_txn_fdw_tuplestores, ret);
+			afterTriggers.ybc_txn_fdw_tuplestores =
+				lappend(afterTriggers.ybc_txn_fdw_tuplestores, ret);
 		}
 		else
 			trigger_data->fdw_tuplestore = ret;

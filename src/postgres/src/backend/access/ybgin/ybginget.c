@@ -34,7 +34,6 @@
 #include "catalog/pg_collation.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_type.h"
-#include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
@@ -42,6 +41,7 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/selfuncs.h"
+#include "utils/yb_like_support.h"
 
 #include "pg_yb_utils.h"
 #include "yb/yql/pggate/ybc_pggate.h"
@@ -261,7 +261,7 @@ get_greaterstr(Datum prefix, Oid datatype, Oid colloid)
 	Oid			opfamily;
 	Oid			oproid;
 
-	/* make_greater_string cannot accurately handle non-C collations. */
+	/* yb_make_greater_string cannot accurately handle non-C collations. */
 	if (!lc_collate_is_c(colloid))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -287,16 +287,7 @@ get_greaterstr(Datum prefix, Oid datatype, Oid colloid)
 		elog(ERROR, "no < operator for opfamily %u", opfamily);
 	fmgr_info(get_opcode(oproid), &ltproc);
 	prefix_const = text_to_const(prefix, colloid);
-#ifdef YB_TODO
-	/* YB_TODO(jasonk@yugabyte)
-	 * Postgres has stopped calling make_greater_string() in all backend executions. Need to
-	 * investigate if this call is the right thing to do.
-	 */
-	return make_greater_string(prefix_const, &ltproc, colloid);
-#else
-	/* This code is only for the compilation to proceed without errors */
-	return prefix_const;
-#endif
+	return yb_make_greater_string(prefix_const, &ltproc, colloid);
 }
 
 static void
@@ -481,8 +472,8 @@ addTargetSystemColumn(int attnum, YBCPgStatement handle)
 }
 
 /*
- * Add a regular column as target to the given statement handle.  Assume
- * tupdesc's relation is the same as handle's target relation.
+ * Add a regular column as target to the given statement handle if it is not
+ * dropped.  Assume tupdesc's relation is the same as handle's target relation.
  *
  * See related ybcAddTargetColumn.
  */
@@ -497,6 +488,9 @@ addTargetRegularColumn(TupleDesc tupdesc, int attnum, YBCPgStatement handle)
 	YBCPgTypeAttrs type_attrs;
 
 	att = TupleDescAttr(tupdesc, attnum - 1);
+	/* Ignore dropped attributes. */
+	if (att->attisdropped)
+		return;
 	type_attrs.typmod = att->atttypmod;
 	expr = YBCNewColumnRef(handle,
 						   attnum,
@@ -536,7 +530,7 @@ ybginSetupTargets(IndexScanDesc scan)
 	/*
 	 * For now, target all non-system columns of the base table.  This can be
 	 * very inefficient.  The lsm index access method avoids this using
-	 * filtering (see ybcAddTargetColumnIfRequired).
+	 * filtering (see YbAddTargetColumnIfRequired).
 	 *
 	 * TODO(jason): don't target unnecessary columns.
 	 */
@@ -575,14 +569,7 @@ ybginDoFirstExec(IndexScanDesc scan, ScanDirection dir)
 	/* targets */
 	ybginSetupTargets(scan);
 
-	/* syscatalog version */
-	if (YBIsDBCatalogVersionMode())
-		HandleYBStatus(YBCPgSetDBCatalogCacheVersion(ybso->handle,
-													 MyDatabaseId,
-													 yb_catalog_cache_version));
-	else
-		HandleYBStatus(YBCPgSetCatalogCacheVersion(ybso->handle,
-												   yb_catalog_cache_version));
+	YbSetCatalogCacheVersion(ybso->handle, YbGetCatalogCacheVersion());
 
 	/* execute select */
 	ybginExecSelect(scan, dir);

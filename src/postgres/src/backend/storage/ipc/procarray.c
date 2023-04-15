@@ -650,6 +650,13 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
 		allProcs[procno].pgxactoff = index;
 	}
 
+<<<<<<< procarray.c
+	/* Oops */
+	LWLockRelease(ProcArrayLock);
+
+	elog(LOG, "failed to find proc with pid %d in ProcArray", proc->pid);
+}
+=======
 	/*
 	 * Release in reversed acquisition order, to reduce frequency of having to
 	 * wait for XidGenLock while holding ProcArrayLock.
@@ -658,6 +665,7 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
 	LWLockRelease(ProcArrayLock);
 }
 
+>>>>>>> procarray.c
 
 /*
  * ProcArrayEndTransaction -- mark a transaction as no longer running

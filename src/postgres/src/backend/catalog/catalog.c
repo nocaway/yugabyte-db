@@ -50,11 +50,18 @@
 #include "utils/syscache.h"
 
 /* YB includes. */
+<<<<<<< catalog.c
+#include "access/htup_details.h"
+#include "catalog/pg_yb_catalog_version.h"
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
+=======
 #include "access/heapam.h"
 #include "access/htup_details.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "catalog/pg_yb_catalog_version.h"
 #include "commands/defrem.h"
+>>>>>>> catalog.c
 #include "utils/syscache.h"
 #include "pg_yb_utils.h"
 
@@ -273,6 +280,25 @@ IsSharedRelation(Oid relationId)
 	if (relationId == AuthIdRelationId ||
 		relationId == AuthMemRelationId ||
 		relationId == DatabaseRelationId ||
+<<<<<<< catalog.c
+		relationId == PLTemplateRelationId ||
+		relationId == SharedDescriptionRelationId ||
+		relationId == SharedDependRelationId ||
+		relationId == SharedSecLabelRelationId ||
+		relationId == TableSpaceRelationId ||
+		relationId == DbRoleSettingRelationId ||
+		relationId == ReplicationOriginRelationId ||
+		relationId == SubscriptionRelationId ||
+		relationId == YBCatalogVersionRelationId ||
+		relationId == YbProfileRelationId ||
+		relationId == YbRoleProfileRelationId)
+		return true;
+	/* These are their indexes (see indexing.h) */
+	if (relationId == AuthIdRolnameIndexId ||
+		relationId == AuthIdOidIndexId ||
+		relationId == AuthMemRoleMemIndexId ||
+		relationId == AuthMemMemRoleIndexId ||
+=======
 		relationId == DbRoleSettingRelationId ||
 		relationId == ParameterAclRelationId ||
 		relationId == ReplicationOriginRelationId ||
@@ -288,6 +314,7 @@ IsSharedRelation(Oid relationId)
 		relationId == AuthIdRolnameIndexId ||
 		relationId == AuthMemMemRoleIndexId ||
 		relationId == AuthMemRoleMemIndexId ||
+>>>>>>> catalog.c
 		relationId == DatabaseNameIndexId ||
 		relationId == DatabaseOidIndexId ||
 		relationId == DbRoleSettingDatidRolidIndexId ||
@@ -297,6 +324,24 @@ IsSharedRelation(Oid relationId)
 		relationId == ReplicationOriginNameIndex ||
 		relationId == SharedDependDependerIndexId ||
 		relationId == SharedDependReferenceIndexId ||
+<<<<<<< catalog.c
+		relationId == SharedSecLabelObjectIndexId ||
+		relationId == TablespaceOidIndexId ||
+		relationId == TablespaceNameIndexId ||
+		relationId == DbRoleSettingDatidRolidIndexId ||
+		relationId == ReplicationOriginIdentIndex ||
+		relationId == ReplicationOriginNameIndex ||
+		relationId == SubscriptionObjectIndexId ||
+		relationId == SubscriptionNameIndexId ||
+		relationId == YBCatalogVersionDbOidIndexId ||
+		relationId == YbProfileOidIndexId ||
+		relationId == YbProfileRolnameIndexId ||
+		relationId == YbRoleProfileOidIndexId)
+		return true;
+	/* These are their toast tables and toast indexes (see toasting.h) */
+	if (relationId == PgShdescriptionToastTable ||
+		relationId == PgShdescriptionToastIndex ||
+=======
 		relationId == SharedDescriptionObjIndexId ||
 		relationId == SharedSecLabelObjectIndexId ||
 		relationId == SubscriptionNameIndexId ||
@@ -310,6 +355,7 @@ IsSharedRelation(Oid relationId)
 		relationId == PgAuthidToastIndex ||
 		relationId == PgDatabaseToastTable ||
 		relationId == PgDatabaseToastIndex ||
+>>>>>>> catalog.c
 		relationId == PgDbRoleSettingToastTable ||
 		relationId == PgDbRoleSettingToastIndex ||
 		relationId == PgParameterAclToastTable ||
