@@ -208,15 +208,9 @@ extern void recordMultipleDependencies(const ObjectAddress *depender,
 									   DependencyType behavior);
 
 extern void recordDependencyOnCurrentExtension(const ObjectAddress *object,
-<<<<<<< dependency.h
-								   bool isReplace);
-
-extern void YbRecordPinDependency(const ObjectAddress *referenced, bool shared_insert);
-=======
 											   bool isReplace);
 
 extern void YBRecordPinDependency(const ObjectAddress *referenced, bool shared_insert);
->>>>>>> dependency.h
 
 extern void checkMembershipInCurrentExtension(const ObjectAddress *object);
 

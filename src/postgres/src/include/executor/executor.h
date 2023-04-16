@@ -15,15 +15,13 @@
 #define EXECUTOR_H
 
 #include "executor/execdesc.h"
-<<<<<<< executor.h
-#include "executor/execPartition.h"
-=======
 #include "fmgr.h"
 #include "nodes/lockoptions.h"
->>>>>>> executor.h
 #include "nodes/parsenodes.h"
 #include "utils/memutils.h"
 
+/* Yugabyte includes */
+#include "executor/execPartition.h"
 
 /*
  * The "eflags" argument to ExecutorStart and the various ExecInitNode
@@ -113,55 +111,6 @@ extern bool execCurrentOf(CurrentOfExpr *cexpr,
  * prototypes from functions in execGrouping.c
  */
 extern ExprState *execTuplesMatchPrepare(TupleDesc desc,
-<<<<<<< executor.h
-					   int numCols,
-					   AttrNumber *keyColIdx,
-					   Oid *eqOperators,
-					   PlanState *parent);
-extern void execTuplesHashPrepare(int numCols,
-					  Oid *eqOperators,
-					  Oid **eqFuncOids,
-					  FmgrInfo **hashFunctions);
-extern ExprState *ybPrepareOuterExprsEqualFn(List *outer_exprs,
-				Oid *eqOps, PlanState *parent);
-extern TupleHashTable BuildTupleHashTable(PlanState *parent,
-					TupleDesc inputDesc,
-					int numCols, AttrNumber *keyColIdx,
-					Oid *eqfuncoids,
-					FmgrInfo *hashfunctions,
-					long nbuckets, Size additionalsize,
-					MemoryContext tablecxt,
-					MemoryContext tempcxt, bool use_variable_hash_iv);
-extern TupleHashTable YbBuildTupleHashTableExt(PlanState *parent,
-						 TupleDesc inputDesc,
-						 int numCols, ExprState **keyColExprs,
-						 ExprState *eqExpr,
-						 Oid *eqfuncoids,
-						 FmgrInfo *hashfunctions,
-						 long nbuckets, Size additionalsize,
-						 MemoryContext metacxt,
-						 MemoryContext tablecxt,
-						 MemoryContext tempcxt,
-						 ExprContext *expr_cxt,
-						 bool use_variable_hash_iv);
-extern TupleHashTable BuildTupleHashTableExt(PlanState *parent,
-					TupleDesc inputDesc,
-					int numCols, AttrNumber *keyColIdx,
-					Oid *eqfuncoids,
-					FmgrInfo *hashfunctions,
-					long nbuckets, Size additionalsize,
-					MemoryContext metacxt,
-					MemoryContext tablecxt,
-					MemoryContext tempcxt, bool use_variable_hash_iv);
-extern TupleHashEntry LookupTupleHashEntry(TupleHashTable hashtable,
-					 TupleTableSlot *slot,
-					 bool *isnew);
-extern TupleHashEntry FindTupleHashEntry(TupleHashTable hashtable,
-				   TupleTableSlot *slot,
-				   ExprState *eqcomp,
-				   FmgrInfo *hashfunctions,
-				   AttrNumber *keyColIdx);
-=======
 										 int numCols,
 										 const AttrNumber *keyColIdx,
 										 const Oid *eqOperators,
@@ -192,6 +141,7 @@ extern TupleHashTable YbBuildTupleHashTableExt(PlanState *parent,
 											   MemoryContext metacxt,
 											   MemoryContext tablecxt,
 											   MemoryContext tempcxt,
+											   ExprContext *expr_cxt,
 											   bool use_variable_hash_iv);
 extern TupleHashTable BuildTupleHashTableExt(PlanState *parent,
 											 TupleDesc inputDesc,
@@ -216,7 +166,6 @@ extern TupleHashEntry FindTupleHashEntry(TupleHashTable hashtable,
 										 ExprState *eqcomp,
 										 FmgrInfo *hashfunctions,
 										 AttrNumber *keyColIdx);
->>>>>>> executor.h
 extern void ResetTupleHashTable(TupleHashTable hashtable);
 
 /*
@@ -267,25 +216,6 @@ extern void ExecutorRewind(QueryDesc *queryDesc);
 extern bool ExecCheckRTPerms(List *rangeTable, bool ereport_on_violation);
 extern void CheckValidResultRel(ResultRelInfo *resultRelInfo, CmdType operation);
 extern void InitResultRelInfo(ResultRelInfo *resultRelInfo,
-<<<<<<< executor.h
-				  Relation resultRelationDesc,
-				  Index resultRelationIndex,
-				  ResultRelInfo *partition_root_rri,
-				  int instrument_options);
-extern ResultRelInfo *ExecGetTriggerResultRel(EState *estate, Oid relid);
-extern void ExecCleanUpTriggerState(EState *estate);
-extern bool ExecContextForcesOids(PlanState *planstate, bool *hasoids);
-extern void ExecConstraints(ResultRelInfo *resultRelInfo,
-                            TupleTableSlot *slot,
-                            EState *estate,
-                            ModifyTableState *mtstate);
-extern bool ExecPartitionCheck(ResultRelInfo *resultRelInfo,
-				   TupleTableSlot *slot, EState *estate, bool emitError);
-extern void ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
-							TupleTableSlot *slot, EState *estate);
-extern void ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
-					 TupleTableSlot *slot, EState *estate);
-=======
 							  Relation resultRelationDesc,
 							  Index resultRelationIndex,
 							  ResultRelInfo *partition_root_rri,
@@ -303,7 +233,6 @@ extern void ExecPartitionCheckEmitError(ResultRelInfo *resultRelInfo,
 										TupleTableSlot *slot, EState *estate);
 extern void ExecWithCheckOptions(WCOKind kind, ResultRelInfo *resultRelInfo,
 								 TupleTableSlot *slot, EState *estate);
->>>>>>> executor.h
 extern LockTupleMode ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo);
 extern ExecRowMark *ExecFindRowMark(EState *estate, Index rti, bool missing_ok);
 extern ExecAuxRowMark *ExecBuildAuxRowMark(ExecRowMark *erm, List *targetlist);

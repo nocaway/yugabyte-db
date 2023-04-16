@@ -5368,20 +5368,18 @@
   proargmodes => '{i,o,o,o,o,o,o}',
   proargnames => '{db_oid,db_oid,backend_pid,query_text,termination_reason,query_start,query_end}',
   prosrc => 'yb_pg_stat_get_queries'},
+# YB_TODO(neil) talk to Fizaa about her changes for "pg_stat_get_progress_info".
+# commit ced7c32846e4adbe2a93ca20fc64fd648bec8851
+# Author: Fizaa Luthra <fizaaluthra@gmail.com>
+# Date:   Fri Jan 27 12:14:34 2023 -0500
 { oid => '3318',
   descr => 'statistics: information about progress of backends running maintenance command',
   proname => 'pg_stat_get_progress_info', prorows => '100', proretset => 't',
   provolatile => 's', proparallel => 'r', prorettype => 'record',
   proargtypes => 'text',
-<<<<<<< pg_proc.dat
-  proallargtypes => '{text,int4,oid,oid,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8}',
-  proargmodes => '{i,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o}',
-  proargnames => '{cmdtype,pid,datid,relid,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13,param14,param15,param16,param17}',
-=======
   proallargtypes => '{text,int4,oid,oid,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8,int8}',
   proargmodes => '{i,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o}',
   proargnames => '{cmdtype,pid,datid,relid,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13,param14,param15,param16,param17,param18,param19,param20}',
->>>>>>> pg_proc.dat
   prosrc => 'pg_stat_get_progress_info' },
 { oid => '3099',
   descr => 'statistics: information about currently active replication',
@@ -8098,16 +8096,6 @@
   proparallel => 'r', prorettype => 'float8', proargtypes => '',
   prosrc => 'pg_notification_queue_usage' },
 
-<<<<<<< pg_proc.dat
-# memory context of local backend
-# TODO(#13568): In Postgres 14, the opaque type was removed, and its OID is reused for
-# pg_get_backend_memory_contexts. As of D18777, opaque type exists in YugabyteDB,
-# we need to use a different OID for pg_get_backend_memory_contexts. The original
-# OID from Postgres should be used when opaque type is removed.
-{ oid => '8058', descr => 'information about all memory contexts of local backend',
-  proname => 'pg_get_backend_memory_contexts', prorows => '100', proretset => 't',
-  provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '',
-=======
 # shared memory usage
 { oid => '5052', descr => 'allocations from the main shared memory segment',
   proname => 'pg_get_shmem_allocations', prorows => '50', proretset => 't',
@@ -8116,13 +8104,29 @@
   proargnames => '{name,off,size,allocated_size}',
   prosrc => 'pg_get_shmem_allocations' },
 
+# YB_TODO(neil) Ask if this change is needed.
+# commit 5f9a7fafccc50dde8e036130bb9bf64176cf72b6
+# Author: Hemant Bhanawat <hbhanawat@yugabyte.com>
+# Date:   Fri Mar 17 09:57:28 2023 +0530
+# memory context of local backend
+# TODO(#13568): In Postgres 14, the opaque type was removed, and its OID is reused for
+# pg_get_backend_memory_contexts. As of D18777, opaque type exists in YugabyteDB,
+# we need to use a different OID for pg_get_backend_memory_contexts. The original
+# OID from Postgres should be used when opaque type is removed.
+# { oid => '8058', descr => 'information about all memory contexts of local backend',
+#   proname => 'pg_get_backend_memory_contexts', prorows => '100', proretset => 't',
+#   provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '',
+#   proallargtypes => '{text,text,text,int4,int8,int8,int8,int8,int8}',
+#   proargmodes => '{o,o,o,o,o,o,o,o,o}',
+#   proargnames => '{name, ident, parent, level, total_bytes, total_nblocks, free_bytes, free_chunks, used_bytes}',
+#   prosrc => 'pg_get_backend_memory_contexts' },
+
 # memory context of local backend
 { oid => '2282',
   descr => 'information about all memory contexts of local backend',
   proname => 'pg_get_backend_memory_contexts', prorows => '100',
   proretset => 't', provolatile => 'v', proparallel => 'r',
   prorettype => 'record', proargtypes => '',
->>>>>>> pg_proc.dat
   proallargtypes => '{text,text,text,int4,int8,int8,int8,int8,int8}',
   proargmodes => '{o,o,o,o,o,o,o,o,o}',
   proargnames => '{name, ident, parent, level, total_bytes, total_nblocks, free_bytes, free_chunks, used_bytes}',

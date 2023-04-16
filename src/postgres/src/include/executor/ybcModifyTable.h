@@ -160,13 +160,9 @@ extern void YBCExecuteDeleteIndex(Relation index,
  * it is a single row op.
  */
 extern bool YBCExecuteUpdate(Relation rel,
-<<<<<<< ybcModifyTable.h
-							 TupleTableSlot *slot,
-							 HeapTuple oldtuple,
-=======
 							 ResultRelInfo *resultRelInfo,
 							 TupleTableSlot *slot,
->>>>>>> ybcModifyTable.h
+							 HeapTuple oldtuple,
 							 HeapTuple tuple,
 							 EState *estate,
 							 ModifyTable *mt_plan,

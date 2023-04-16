@@ -85,20 +85,14 @@ extern ObjectAddress AlterOperator(AlterOperatorStmt *stmt);
 
 /* commands/statscmds.c */
 extern ObjectAddress CreateStatistics(CreateStatsStmt *stmt);
-<<<<<<< defrem.h
-extern void RemoveStatisticsById(Oid statsOid);
-extern void UpdateStatisticsForTypeChange(Oid statsOid,
-							  Oid relationOid, int attnum,
-							  Oid oldColumnType, Oid newColumnType);
-extern char *YbChooseExtendedStatisticName(const char *name1,
-							  const char *name2,
-							  const char *label, Oid namespaceid);
-=======
 extern ObjectAddress AlterStatistics(AlterStatsStmt *stmt);
 extern void RemoveStatisticsById(Oid statsOid);
 extern void RemoveStatisticsDataById(Oid statsOid, bool inh);
 extern Oid	StatisticsGetRelation(Oid statId, bool missing_ok);
->>>>>>> defrem.h
+
+extern char *YbChooseExtendedStatisticName(const char *name1,
+							  const char *name2,
+							  const char *label, Oid namespaceid);
 
 /* commands/aggregatecmds.c */
 extern ObjectAddress DefineAggregate(ParseState *pstate, List *name, List *args, bool oldstyle,

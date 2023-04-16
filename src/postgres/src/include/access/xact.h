@@ -60,11 +60,7 @@ extern PGDLLIMPORT bool DefaultXactReadOnly;
 extern PGDLLIMPORT bool XactReadOnly;
 
 /* flag for logging statements in this transaction */
-<<<<<<< xact.h
-extern bool xact_is_sampled;
-=======
 extern PGDLLIMPORT bool xact_is_sampled;
->>>>>>> xact.h
 
 /*
  * Xact is deferrable -- only meaningful (currently) for read only

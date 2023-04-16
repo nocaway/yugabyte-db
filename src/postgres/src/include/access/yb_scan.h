@@ -98,7 +98,6 @@ typedef struct YbScanDescData
 	/* Secondary index used in this scan. */
 	Relation index;
 
-<<<<<<< yb_scan.h
 	/*
 	 * In YB ScanKey could be one of two types:
 	 *  - key for regular column
@@ -118,9 +117,7 @@ typedef struct YbScanDescData
 	/* True if all the conditions for this index were bound to pggate. */
 	bool is_full_cond_bound;
 
-=======
 	/* Destination for queried data from Yugabyte database */
->>>>>>> yb_scan.h
 	TupleDesc target_desc;
 	AttrNumber target_key_attnums[YB_MAX_SCAN_KEYS];
 
