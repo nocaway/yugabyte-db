@@ -550,14 +550,9 @@ typedef enum NodeTag
 	T_YbSeqScan,
 	T_YbSeqScanState,
 	T_YbBatchedNestLoop,
-<<<<<<< nodes.h
 	T_YbBatchedNestLoopState,
 	T_YbCreateProfileStmt,
 	T_YbDropProfileStmt,
-
-=======
-	T_YbBatchedNestLoopState
->>>>>>> nodes.h
 } NodeTag;
 
 /*

@@ -93,7 +93,6 @@ extern void create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel);
  * joinpath.c
  *	   routines to create join paths
  */
-<<<<<<< paths.h
 extern Relids yb_get_batched_relids(NestPath *nest);
 
 extern Relids yb_get_unbatched_relids(NestPath *nest);
@@ -103,15 +102,9 @@ extern bool yb_is_outer_inner_batched(Path *outer, Path *inner);
 extern bool yb_is_nestloop_batched(NestPath *nest);
 
 extern void add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
-					 RelOptInfo *outerrel, RelOptInfo *innerrel,
-					 JoinType jointype, SpecialJoinInfo *sjinfo,
-					 List *restrictlist);
-=======
-extern void add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
 								 RelOptInfo *outerrel, RelOptInfo *innerrel,
 								 JoinType jointype, SpecialJoinInfo *sjinfo,
 								 List *restrictlist);
->>>>>>> paths.h
 
 /*
  * joinrels.c

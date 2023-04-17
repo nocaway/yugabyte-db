@@ -527,24 +527,12 @@ typedef struct ResultRelInfo
 	ExprState  *ri_PartitionCheckExpr;
 
 	/*
-<<<<<<< execnodes.h
-	 * RootResultRelInfo gives the target relation mentioned in the query, if
-	 * it's a partitioned table. It is not set if the target relation
-=======
 	 * Information needed by tuple routing target relations
 	 *
 	 * RootResultRelInfo gives the target relation mentioned in the query, if
 	 * it's a partitioned table. It is not set if the target relation
->>>>>>> execnodes.h
 	 * mentioned in the query is an inherited table, nor when tuple routing is
 	 * not needed.
-<<<<<<< execnodes.h
-	 */
-	struct ResultRelInfo *ri_RootResultRelInfo;
-
-	/* true if ready for tuple routing */
-	bool		ri_PartitionReadyForRouting;
-=======
 	 *
 	 * RootToPartitionMap and PartitionTupleSlot, initialized by
 	 * ExecInitRoutingInfo, are non-NULL if partition has a different tuple
@@ -571,7 +559,6 @@ typedef struct ResultRelInfo
 	 * one of its ancestors; see ExecCrossPartitionUpdateForeignKey().
 	 */
 	List	   *ri_ancestorResultRels;
->>>>>>> execnodes.h
 } ResultRelInfo;
 
 /*
@@ -1368,14 +1355,6 @@ typedef struct ModifyTableState
 	/* controls transition table population for INSERT...ON CONFLICT UPDATE */
 	struct TransitionCaptureState *mt_oc_transition_capture;
 
-<<<<<<< execnodes.h
-	/* Per plan map for tuple conversion from child to root */
-	TupleConversionMap **mt_per_subplan_tupconv_maps;
-
-	/* YB specific attributes. */
-	bool yb_fetch_target_tuple;	/* Perform initial scan to populate
-								 * the ybctid. */
-=======
 	/* Flags showing which subcommands are present INS/UPD/DEL/DO NOTHING */
 	int			mt_merge_subcommands;
 
@@ -1385,8 +1364,8 @@ typedef struct ModifyTableState
 	double		mt_merge_deleted;
 
 	/* YB specific attributes. */
-	bool yb_mt_is_single_row_update_or_delete;
->>>>>>> execnodes.h
+	bool yb_fetch_target_tuple;	/* Perform initial scan to populate
+								 * the ybctid. */
 } ModifyTableState;
 
 /* ----------------

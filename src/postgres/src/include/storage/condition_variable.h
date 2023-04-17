@@ -22,14 +22,9 @@
 #ifndef CONDITION_VARIABLE_H
 #define CONDITION_VARIABLE_H
 
-<<<<<<< condition_variable.h
 #include "storage/proc.h"
-#include "storage/s_lock.h"
-#include "storage/proclist_types.h"
-=======
 #include "storage/proclist_types.h"
 #include "storage/spin.h"
->>>>>>> condition_variable.h
 
 typedef struct
 {
@@ -60,14 +55,11 @@ extern void ConditionVariableInit(ConditionVariable *cv);
  * the condition variable.
  */
 extern void ConditionVariableSleep(ConditionVariable *cv, uint32 wait_event_info);
-<<<<<<< condition_variable.h
-extern void ConditionVariableCancelSleep(void);
-extern void ConditionVariableCancelSleepForProc(volatile PGPROC *proc);
-=======
 extern bool ConditionVariableTimedSleep(ConditionVariable *cv, long timeout,
 										uint32 wait_event_info);
 extern void ConditionVariableCancelSleep(void);
->>>>>>> condition_variable.h
+
+extern void ConditionVariableCancelSleepForProc(volatile PGPROC *proc);
 
 /*
  * Optionally, ConditionVariablePrepareToSleep can be called before entering
