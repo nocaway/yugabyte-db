@@ -40,18 +40,10 @@
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
-<<<<<<< yb_scan.c
-#include "nodes/relation.h"
-#include "optimizer/cost.h"
-#include "optimizer/var.h"
-#include "utils/datum.h"
-#include "utils/elog.h"
-=======
 #include "access/relation.h"
 #include "optimizer/cost.h"
 #include "optimizer/optimizer.h"
 #include "utils/datum.h"
->>>>>>> yb_scan.c
 #include "utils/rel.h"
 #include "utils/lsyscache.h"
 #include "utils/resowner_private.h"
@@ -59,12 +51,13 @@
 #include "utils/selfuncs.h"
 #include "utils/snapmgr.h"
 #include "utils/spccache.h"
-#include "utils/typcache.h"
 
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "pg_yb_utils.h"
 #include "access/nbtree.h"
 #include "access/yb_scan.h"
+#include "utils/elog.h"
+#include "utils/typcache.h"
 
 typedef struct YbScanPlanData
 {
@@ -957,16 +950,12 @@ static bool YbIsScanCompatible(Oid column_typid,
 static bool
 YbCheckScanTypes(YbScanDesc ybScan, YbScanPlan scan_plan, int i)
 {
-	ScanKey key = ybScan->keys[i];
+	ScanKey key = ybScan->reordered_keys[i];
 	Oid valtypid = key->sk_subtype;
 	Oid atttypid = valtypid == RECORDOID ? RECORDOID :
 		ybc_get_atttypid(scan_plan->bind_desc, scan_plan->bind_key_attnums[i]);
 	Assert(OidIsValid(atttypid));
-<<<<<<< yb_scan.c
-=======
-	ScanKey key = ybScan->reordered_keys[i];
-	Oid valtypid = key->sk_subtype;
->>>>>>> yb_scan.c
+
 	/*
 	 * Example: CREATE TABLE t1(c0 REAL, c1 TEXT, PRIMARY KEY(c0 asc));
 	 *          INSERT INTO t1(c0, c1) VALUES(0.4, 'SHOULD BE IN RESULT');
@@ -1346,12 +1335,8 @@ YbBindSearchArray(YbScanDesc ybScan, YbScanPlan scan_plan,
 static bool
 YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 {
-<<<<<<< yb_scan.c
-	Relation relation = ybScan->relation;
-=======
 	Relation relation = ((TableScanDesc)ybScan)->rs_rd;
 	Relation index = ybScan->index;
->>>>>>> yb_scan.c
 
 	HandleYBStatus(YBCPgNewSelect(YBCGetDatabaseOid(relation),
 								  YbGetStorageRelid(relation),
@@ -1404,7 +1389,6 @@ YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 	 * to establish priority order EQUAL > IN > BETWEEN.
 	 */
 	int noffsets = 0;
-<<<<<<< yb_scan.c
 	int offsets[ybScan->nkeys + 1]; /* VLA - scratch space: +1 to avoid zero elements */
 	int length_of_key = 0;
 
@@ -1417,7 +1401,9 @@ YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 			!YbIsSearchArray(key))
 		{
 			YbBindRowComparisonKeys(ybScan, scan_plan, i);
-=======
+		}
+#ifdef YB_TODO
+	/* YB_TODO(neil) recheck the following code. */
 	int offsets[ybScan->nrkeys + 1]; /* VLA - scratch space: +1 to avoid zero elements */
 
 	for (int i = 0; i < ybScan->nrkeys; i++)
@@ -1589,8 +1575,8 @@ YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 				}
 			}
 			continue;
->>>>>>> yb_scan.c
 		}
+#endif
 
 		/* Check if this is primary columns */
 		int bind_key_attnum = scan_plan->bind_key_attnums[i];
@@ -1681,14 +1667,16 @@ YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 				}
 				else if (YbIsSearchArray(key))
 				{
-<<<<<<< yb_scan.c
 					bool bail_out = false;
 					bool is_bound = 
 						YbBindSearchArray(ybScan, scan_plan,
 										  i, is_column_bound,
 									  	  &bail_out);
 					if (bail_out)
-=======
+						return false;
+
+#ifdef YB_TODO
+/* YB_TODO(neil) Recheck the following code. */
 					/* based on _bt_preprocess_array_keys() */
 					ArrayType  *arrayval;
 					int16		elmlen;
@@ -1746,8 +1734,8 @@ YbBindScanKeys(YbScanDesc ybScan, YbScanPlan scan_plan)
 						* Example: SELECT ... FROM ... WHERE h = ... AND r IN (NULL,NULL);
 						*/
 					if (num_valid == 0)
->>>>>>> yb_scan.c
 						return false;
+#endif
 
 					is_column_bound[idx] |= is_bound;
 				}
@@ -2083,26 +2071,18 @@ ybcSetupTargets(YbScanDesc ybScan, YbScanPlan scan_plan, Scan *pg_scan_plan)
 		}
 	}
 
-<<<<<<< yb_scan.c
+#ifdef NEIL_OID
+	/* OID is now a regular column */
 	if (scan_plan->target_relation->rd_rel->relhasoids)
 	{
 		ybcAddTargetColumn(ybScan, ObjectIdAttributeNumber);
 		target_added = true;
 	}
-
-	if (is_index_only_scan) 
-=======
-#ifdef NEIL_OID
-	/* OID is now a regular column */
-	if (scan_plan->target_relation->rd_rel->relhasoids)
-		ybcAddTargetColumn(ybScan, ObjectIdAttributeNumber);
 #endif
 
 	if (is_index_only_scan)
->>>>>>> yb_scan.c
 	{
 		/*
-<<<<<<< yb_scan.c
 		 * In the case of IndexOnlyScan with no targets, we need to set a
 		 * placeholder for the targets to properly make pg_dml fetcher recognize
 		 * the correct number of rows though the targeted rows are not being
@@ -2133,32 +2113,6 @@ ybcSetupTargets(YbScanDesc ybScan, YbScanPlan scan_plan, Scan *pg_scan_plan)
 		 * base_ctid to query data before responding.
 		 */
 		ybcAddTargetColumn(ybScan, YBIdxBaseTupleIdAttributeNumber);
-=======
-		 * IndexOnlyScan:
-		 *   SELECT [ data, ] ybbasectid (ROWID of UserTable, relation) FROM secondary-index-table
-		 * In this case, Postgres requests base_ctid and maybe also data from IndexTable and then
-		 * uses them for further processing.
-		 */
-		ybcAddTargetColumn(ybScan, YBIdxBaseTupleIdAttributeNumber);
-	}
-	else
-	{
-		/* Two cases:
-		 * - Primary Scan (Key or sequential)
-		 *     SELECT data, ybctid FROM table [ WHERE primary-key-condition ]
-		 * - Secondary IndexScan
-		 *     SELECT data, ybctid FROM table WHERE ybctid IN ( SELECT base_ybctid FROM IndexTable )
-		 */
-		ybcAddTargetColumn(ybScan, YBTupleIdAttributeNumber);
-		if (index && !index->rd_index->indisprimary)
-		{
-			/*
-			 * IndexScan: Postgres layer sends both actual-query and index-scan to PgGate, who will
-			 * select and immediately use base_ctid to query data before responding.
-			 */
-			ybcAddTargetColumn(ybScan, YBIdxBaseTupleIdAttributeNumber);
-		}
->>>>>>> yb_scan.c
 	}
 }
 
@@ -2268,7 +2222,6 @@ ybcBeginScan(Relation relation,
 		ScanKey key = &keys[i];
 		/*
 		 * Keys for hash code search should be placed after regular keys.
-<<<<<<< yb_scan.c
 		 * For this purpose they are written into keys array from
 		 * right to left.
 		 * We also flatten out row keys
@@ -2289,17 +2242,6 @@ ybcBeginScan(Relation relation,
 	}
 	ybScan->exec_params = NULL;
 	ybScan->relation = relation;
-=======
-		 * For this purpose they are written into keys array from right to left.
-		 */
-		ybScan->reordered_keys
-			[YbIsHashCodeSearch(key) ? (nkeys - (++ybScan->nhash_keys)) : ++ybScan->nrkeys]
-			= key;
-	}
-
-	ybScan->exec_params = NULL;
-	ybScan->quit_scan = false;
->>>>>>> yb_scan.c
 	ybScan->index = index;
 	ybScan->quit_scan = false;
 
@@ -2418,12 +2360,6 @@ ybc_keys_match(HeapTuple tup, YbScanDesc ybScan, bool *recheck)
 	return true;
 }
 
-<<<<<<< yb_scan.c
-HeapTuple
-ybc_getnext_heaptuple(YbScanDesc ybScan, bool is_forward_scan,
-					  bool *recheck)
-{
-=======
 static bool
 indextuple_matches_key(IndexTuple tup,
 					   TupleDesc tupdesc,
@@ -2486,7 +2422,6 @@ HeapTuple ybc_getnext_heaptuple(YbScanDesc ybScan, bool is_forward_scan, bool *r
 	int         nkeys    = ybScan->nrkeys;
 	ScanKey    *keys     = ybScan->reordered_keys;
 	AttrNumber *sk_attno = ybScan->target_key_attnums;
->>>>>>> yb_scan.c
 	HeapTuple   tup      = NULL;
 
 	if (ybScan->quit_scan)
@@ -2519,11 +2454,6 @@ HeapTuple ybc_getnext_heaptuple(YbScanDesc ybScan, bool is_forward_scan, bool *r
 	return tup;
 }
 
-<<<<<<< yb_scan.c
-IndexTuple
-ybc_getnext_indextuple(YbScanDesc ybScan, bool is_forward_scan, bool *recheck)
-{
-=======
 IndexTuple ybc_getnext_indextuple(YbScanDesc ybScan, bool is_forward_scan, bool *recheck)
 {
 	int         nkeys    = ybScan->nrkeys;
@@ -2532,7 +2462,6 @@ IndexTuple ybc_getnext_indextuple(YbScanDesc ybScan, bool is_forward_scan, bool 
 	Relation    index    = ybScan->index;
 	IndexTuple  tup      = NULL;
 
->>>>>>> yb_scan.c
 	if (ybScan->quit_scan)
 		return NULL;
 
@@ -3236,16 +3165,17 @@ YBCLockTuple(Relation relation, Datum ybctid, RowMarkType mode, LockWaitPolicy w
 	exec_params.limit_count = 1;
 	exec_params.rowmark = mode;
 	exec_params.wait_policy = wait_policy;
-<<<<<<< yb_scan.c
-  exec_params.stmt_in_txn_limit_ht_for_reads =
+#ifdef YB_TODO
+    /* YB_TODO(neil) Need check when compiling code */
+    exec_params.stmt_in_txn_limit_ht_for_reads =
 		estate->yb_exec_params.stmt_in_txn_limit_ht_for_reads;
 
 	HTSU_Result res = HeapTupleMayBeUpdated;
-=======
+#else
 	exec_params.statement_in_txn_limit = estate->yb_exec_params.statement_in_txn_limit;
 
 	TM_Result res = TM_Ok;
->>>>>>> yb_scan.c
+#endif
 	MemoryContext exec_context = GetCurrentMemoryContext();
 
 	PG_TRY();

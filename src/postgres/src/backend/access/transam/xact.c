@@ -298,17 +298,10 @@ static char *prepareGID;
  * Some commands want to force synchronous commit.
  */
 static bool forceSyncCommit = false;
-<<<<<<< xact.c
 
 /* Flag for logging statements in a transaction. */
 bool		xact_is_sampled = false;
 
-=======
-
-/* Flag for logging statements in a transaction. */
-bool		xact_is_sampled = false;
-
->>>>>>> xact.c
 /*
  * Private context for transaction-abort work --- we reserve space for this
  * at startup to ensure that AbortTransaction and AbortSubTransaction can work
@@ -2150,11 +2143,7 @@ StartTransaction(void)
 	/* Determine if statements are logged in this transaction */
 	xact_is_sampled = log_xact_sample_rate != 0 &&
 		(log_xact_sample_rate == 1 ||
-<<<<<<< xact.c
-		 random() <= log_xact_sample_rate * MAX_RANDOM_VALUE);
-=======
 		 pg_prng_double(&pg_global_prng_state) <= log_xact_sample_rate);
->>>>>>> xact.c
 
 	/*
 	 * initialize current transaction state fields

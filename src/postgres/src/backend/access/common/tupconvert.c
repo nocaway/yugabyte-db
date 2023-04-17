@@ -18,20 +18,11 @@
  */
 #include "postgres.h"
 
-<<<<<<< tupconvert.c
-#include "access/htup_details.h"
-#include "access/sysattr.h"
-=======
->>>>>>> tupconvert.c
 #include "access/tupconvert.h"
 #include "executor/tuptable.h"
-<<<<<<< tupconvert.c
-#include "utils/builtins.h"
 
 #include "pg_yb_utils.h"
-=======
-
->>>>>>> tupconvert.c
+#include "access/sysattr.h"
 
 /*
  * The conversion setup routines have the following common API:
@@ -241,23 +232,18 @@ execute_attr_map_slot(AttrMap *attrMap,
  * Perform conversion of bitmap of columns according to the map.
  *
  * The input and output bitmaps are offset by
-<<<<<<< tupconvert.c
  * YBGetFirstLowInvalidAttributeNumber to accommodate system cols, like the
-=======
- * FirstLowInvalidHeapAttributeNumber to accommodate system cols, like the
->>>>>>> tupconvert.c
  * column-bitmaps in RangeTblEntry.
+ *
+ * Note: Postgres uses FirstLowInvalidHeapAttributeNumber.
  */
+/* YB_TODO(neil) Need to choose between attrMap and map when fixing compiling errors */
 Bitmapset *
-<<<<<<< tupconvert.c
-execute_attr_map_cols(Bitmapset *in_cols, TupleConversionMap *map, Relation rel)
+execute_attr_map_cols(AttrMap *attrMap, Bitmapset *in_cols,
+					  TupleConversionMap *map, Relation rel))
 {
 	AttrNumber *attrMap = map->attrMap;
 	int			maplen = map->outdesc->natts;
-=======
-execute_attr_map_cols(AttrMap *attrMap, Bitmapset *in_cols)
-{
->>>>>>> tupconvert.c
 	Bitmapset  *out_cols;
 	int			out_attnum;
 
@@ -270,13 +256,8 @@ execute_attr_map_cols(AttrMap *attrMap, Bitmapset *in_cols)
 	 */
 	out_cols = NULL;
 
-<<<<<<< tupconvert.c
 	for (out_attnum = YBGetFirstLowInvalidAttributeNumber(rel) + 1;
-		 out_attnum <= maplen;
-=======
-	for (out_attnum = FirstLowInvalidHeapAttributeNumber;
 		 out_attnum <= attrMap->maplen;
->>>>>>> tupconvert.c
 		 out_attnum++)
 	{
 		int			in_attnum;
@@ -291,23 +272,15 @@ execute_attr_map_cols(AttrMap *attrMap, Bitmapset *in_cols)
 		else
 		{
 			/* normal user column */
-<<<<<<< tupconvert.c
-			in_attnum = attrMap[out_attnum - 1];
-=======
 			in_attnum = attrMap->attnums[out_attnum - 1];
->>>>>>> tupconvert.c
 
 			if (in_attnum == 0)
 				continue;
 		}
 
-<<<<<<< tupconvert.c
 		if (bms_is_member(in_attnum - YBGetFirstLowInvalidAttributeNumber(rel), in_cols))
-			out_cols = bms_add_member(out_cols, out_attnum - YBGetFirstLowInvalidAttributeNumber(rel));
-=======
-		if (bms_is_member(in_attnum - FirstLowInvalidHeapAttributeNumber, in_cols))
-			out_cols = bms_add_member(out_cols, out_attnum - FirstLowInvalidHeapAttributeNumber);
->>>>>>> tupconvert.c
+			out_cols = bms_add_member(out_cols,
+									  out_attnum - YBGetFirstLowInvalidAttributeNumber(rel));
 	}
 
 	return out_cols;

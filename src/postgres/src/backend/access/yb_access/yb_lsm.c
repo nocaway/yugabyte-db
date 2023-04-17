@@ -458,21 +458,14 @@ ybcingettuple(IndexScanDesc scan, ScanDirection dir)
 	/*
 	 * IndexScan(SysTable, Index) --> HeapTuple.
 	 */
-<<<<<<< yb_lsm.c
-	scan->xs_ctup.t_ybctid = 0;
-	bool has_tuple = false;
-=======
 	scan->xs_heaptid.yb_item.ybctid = 0;
->>>>>>> yb_lsm.c
+	bool has_tuple = false;
 	if (ybscan->prepare_params.index_only_scan)
 	{
 		IndexTuple tuple = ybc_getnext_indextuple(ybscan, is_forward_scan, &scan->xs_recheck);
 		if (tuple)
 		{
-<<<<<<< yb_lsm.c
-=======
 			scan->xs_heaptid.yb_item = INDEXTUPLE_YBITEM(tuple);
->>>>>>> yb_lsm.c
 			scan->xs_itup = tuple;
 			scan->xs_itupdesc = RelationGetDescr(scan->indexRelation);
 			has_tuple = true;
@@ -490,11 +483,11 @@ ybcingettuple(IndexScanDesc scan, ScanDirection dir)
 		}
 	}
 
-<<<<<<< yb_lsm.c
-	return has_tuple;
-=======
+#ifdef YB_TODO
+	/* YB_TODO(neil) Recheck this change */
 	return scan->xs_heaptid.yb_item.ybctid != 0;
->>>>>>> yb_lsm.c
+#endif
+	return has_tuple;
 }
 
 void
