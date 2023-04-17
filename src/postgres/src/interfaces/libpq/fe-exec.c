@@ -17,16 +17,10 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <limits.h>
-<<<<<<< fe-exec.c
+
+/* Yugabyte includes */
 #include <stdatomic.h>
-#include "libpq-fe.h"
-#include "libpq-int.h"
 
-#include "mb/pg_wchar.h"
-
-=======
-
->>>>>>> fe-exec.c
 #ifdef WIN32
 #include "win32.h"
 #else

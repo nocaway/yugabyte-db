@@ -52,12 +52,8 @@ self			[,()*]
 %%
 
 %{
-<<<<<<< specscanner.l
-	if(litbuf == NULL)
-=======
 	/* Allocate litbuf in first call of yylex() */
 	if (litbuf == NULL)
->>>>>>> specscanner.l
 	{
 		litbuf = pg_malloc(LITBUF_INIT);
 		litbufsize = LITBUF_INIT;

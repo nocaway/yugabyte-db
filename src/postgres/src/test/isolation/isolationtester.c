@@ -142,53 +142,11 @@ main(int argc, char **argv)
 	spec_yyparse();
 	testspec = &parseresult;
 
-<<<<<<< isolationtester.c
 	/* Release the scanner memory */
 	spec_scanner_finish();
 
-	/* Create a lookup table of all steps. */
-	nallsteps = 0;
-	for (i = 0; i < testspec->nsessions; i++)
-		nallsteps += testspec->sessions[i]->nsteps;
-
-	allsteps = pg_malloc(nallsteps * sizeof(Step *));
-
-	n = 0;
-	for (i = 0; i < testspec->nsessions; i++)
-	{
-		for (j = 0; j < testspec->sessions[i]->nsteps; j++)
-			allsteps[n++] = testspec->sessions[i]->steps[j];
-	}
-
-	qsort(allsteps, nallsteps, sizeof(Step *), &step_qsort_cmp);
-	testspec->nallsteps = nallsteps;
-	testspec->allsteps = allsteps;
-
-	/* Verify that all step names are unique */
-	for (i = 1; i < testspec->nallsteps; i++)
-	{
-		if (strcmp(testspec->allsteps[i - 1]->name,
-				   testspec->allsteps[i]->name) == 0)
-		{
-			fprintf(stderr, "duplicate step name: %s\n",
-					testspec->allsteps[i]->name);
-			exit_nicely();
-		}
-	}
-
-	/*
-	 * In dry-run mode, just print the permutations that would be run, and
-	 * exit.
-	 */
-	if (dry_run)
-	{
-		run_testspec(testspec);
-		return 0;
-	}
-=======
 	/* Perform post-parse checking, and fill in linking fields */
 	check_testspec(testspec);
->>>>>>> isolationtester.c
 
 	printf("Parsed test spec with %d sessions\n", testspec->nsessions);
 

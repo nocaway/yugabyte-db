@@ -3067,16 +3067,11 @@ XmlTableBuilderData
 YYLTYPE
 YYSTYPE
 YY_BUFFER_STATE
-<<<<<<< typedefs.list
 YbCreateProfileStmt
-ZipfCache
-ZipfCell
-=======
 ZSTD_CCtx
 ZSTD_DCtx
 ZSTD_inBuffer
 ZSTD_outBuffer
->>>>>>> typedefs.list
 _SPI_connection
 _SPI_plan
 __AssignProcessToJobObject

@@ -1231,11 +1231,6 @@ PQenv2encoding(void)
 #ifdef ENABLE_NLS
 
 static void
-<<<<<<< fe-misc.c
-libpq_binddomain()
-{
-	static atomic_bool already_bound = false;
-=======
 libpq_binddomain(void)
 {
 	/*
@@ -1245,8 +1240,7 @@ libpq_binddomain(void)
 	 * complete, so don't set the flag till that's done.  Use "volatile" just
 	 * to be sure the compiler doesn't try to get cute.
 	 */
-	static volatile bool already_bound = false;
->>>>>>> fe-misc.c
+	static atomic_bool already_bound = false;
 
 	if (!already_bound)
 	{
