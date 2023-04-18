@@ -28,17 +28,12 @@
 #include "optimizer/plancat.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
-<<<<<<< relnode.c
-#include "partitioning/partbounds.h"
-#include "utils/hsearch.h"
-
-#include "pg_yb_utils.h"
-=======
 #include "utils/hsearch.h"
 #include "utils/lsyscache.h"
 
+#include "partitioning/partbounds.h"
+#include "pg_yb_utils.h"
 
->>>>>>> relnode.c
 typedef struct JoinHashEntry
 {
 	Relids		join_relids;	/* hash key --- MUST BE FIRST */

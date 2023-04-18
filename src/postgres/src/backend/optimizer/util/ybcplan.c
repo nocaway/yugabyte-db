@@ -23,13 +23,9 @@
 
 #include "postgres.h"
 
-<<<<<<< ybcplan.c
-#include "access/htup_details.h"
-=======
 #include "optimizer/ybcplan.h"
 #include "access/htup_details.h"
 #include "access/relation.h"
->>>>>>> ybcplan.c
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "executor/ybcExpr.h"
@@ -44,7 +40,6 @@
 
 /* YB includes. */
 #include "catalog/yb_catalog_version.h"
-#include "optimizer/ybcplan.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 #include "pg_yb_utils.h"
 
@@ -82,15 +77,12 @@
  */
 static bool ModifyTableIsSingleRowWrite(ModifyTable *modifyTable)
 {
-<<<<<<< ybcplan.c
-=======
 #ifdef YB_TODO
 	/* YB_TODO(neil@yugabyte) Need to redo this work. Both sides were changed.
 	 * - NOTE work was done by Jayden.
 	 */
 	Plan *subplan;
 
->>>>>>> ybcplan.c
 	/* Support INSERT, UPDATE, and DELETE. */
 	if (modifyTable->operation != CMD_INSERT &&
 		modifyTable->operation != CMD_UPDATE &&

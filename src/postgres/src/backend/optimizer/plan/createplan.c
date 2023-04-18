@@ -268,61 +268,8 @@ static YbBatchedNestLoop *make_YbBatchedNestLoop(List *tlist,
 			  List *joinclauses, List *otherclauses, List *nestParams,
 			  Plan *lefttree, Plan *righttree,
 			  JoinType jointype, bool inner_unique,
-<<<<<<< createplan.c
 			  size_t num_hashClauseInfos,
 			  YbBNLHashClauseInfo *hashClauseInfos);
-static HashJoin *make_hashjoin(List *tlist,
-			  List *joinclauses, List *otherclauses,
-			  List *hashclauses,
-			  Plan *lefttree, Plan *righttree,
-			  JoinType jointype, bool inner_unique);
-static Hash *make_hash(Plan *lefttree,
-		  Oid skewTable,
-		  AttrNumber skewColumn,
-		  bool skewInherit);
-static MergeJoin *make_mergejoin(List *tlist,
-			   List *joinclauses, List *otherclauses,
-			   List *mergeclauses,
-			   Oid *mergefamilies,
-			   Oid *mergecollations,
-			   int *mergestrategies,
-			   bool *mergenullsfirst,
-			   Plan *lefttree, Plan *righttree,
-			   JoinType jointype, bool inner_unique,
-			   bool skip_mark_restore);
-static Sort *make_sort(Plan *lefttree, int numCols,
-		  AttrNumber *sortColIdx, Oid *sortOperators,
-		  Oid *collations, bool *nullsFirst);
-static Plan *prepare_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
-						   Relids relids,
-						   const AttrNumber *reqColIdx,
-						   bool adjust_tlist_in_place,
-						   int *p_numsortkeys,
-						   AttrNumber **p_sortColIdx,
-						   Oid **p_sortOperators,
-						   Oid **p_collations,
-						   bool **p_nullsFirst);
-static EquivalenceMember *find_ec_member_for_tle(EquivalenceClass *ec,
-					   TargetEntry *tle,
-					   Relids relids);
-static Sort *make_sort_from_pathkeys(Plan *lefttree, List *pathkeys,
-						Relids relids);
-static Sort *make_sort_from_groupcols(List *groupcls,
-						 AttrNumber *grpColIdx,
-						 Plan *lefttree);
-static Material *make_material(Plan *lefttree);
-static WindowAgg *make_windowagg(List *tlist, Index winref,
-			   int partNumCols, AttrNumber *partColIdx, Oid *partOperators,
-			   int ordNumCols, AttrNumber *ordColIdx, Oid *ordOperators,
-			   int frameOptions, Node *startOffset, Node *endOffset,
-			   Oid startInRangeFunc, Oid endInRangeFunc,
-			   Oid inRangeColl, bool inRangeAsc, bool inRangeNullsFirst,
-			   Plan *lefttree);
-static Group *make_group(List *tlist, List *qual, int numGroupCols,
-		   AttrNumber *grpColIdx, Oid *grpOperators,
-		   Plan *lefttree);
-=======
-			  List *hashOps);
 static HashJoin *make_hashjoin(List *tlist,
 							   List *joinclauses, List *otherclauses,
 							   List *hashclauses,
@@ -384,7 +331,6 @@ static WindowAgg *make_windowagg(List *tlist, Index winref,
 static Group *make_group(List *tlist, List *qual, int numGroupCols,
 						 AttrNumber *grpColIdx, Oid *grpOperators, Oid *grpCollations,
 						 Plan *lefttree);
->>>>>>> createplan.c
 static Unique *make_unique_from_sortclauses(Plan *lefttree, List *distinctList);
 static Unique *make_unique_from_pathkeys(Plan *lefttree,
 										 List *pathkeys, int numCols);
@@ -3981,18 +3927,17 @@ create_indexscan_plan(PlannerInfo *root,
 	Assert(baserelid > 0);
 	Assert(best_path->path.parent->rtekind == RTE_RELATION);
 
-	/*
-<<<<<<< createplan.c
-	 * Build "stripped" indexquals structure (no RestrictInfos) to pass to
-	 * executor as indexqualorig
-	 */
+#ifdef YB_TODO
+	/* YB_TODO(neil) Move this code to fix_indexqual_references */
 	stripped_indexquals =
 		!bms_is_empty(root->yb_cur_batched_relids) && IsYugaByteEnabled()
 		? yb_get_actual_batched_clauses(root,
 										indexquals,
 										best_path)
 		: get_actual_clauses(indexquals);
-=======
+#endif
+
+	/*
 	 * Extract the index qual expressions (stripped of RestrictInfos) from the
 	 * IndexClauses list, and prepare a copy with index Vars substituted for
 	 * table Vars.  (This step also does replace_nestloop_params on the
@@ -4001,7 +3946,6 @@ create_indexscan_plan(PlannerInfo *root,
 	fix_indexqual_references(root, best_path,
 							 &stripped_indexquals,
 							 &fixed_indexquals);
->>>>>>> createplan.c
 
 	/*
 	 * Likewise fix up index attr references in the ORDER BY expressions.
@@ -5329,9 +5273,8 @@ create_customscan_plan(PlannerInfo *root, CustomPath *best_path,
  *	JOIN METHODS
  *
  *****************************************************************************/
-
-<<<<<<< createplan.c
-=======
+#ifdef YB_TODO
+/* Check this code. It is deleted in Yugabyte master */
 static Relids
 get_batched_relids(NestPath *nest)
 {
@@ -5352,8 +5295,8 @@ is_nestloop_batched(NestPath *nest)
 	return bms_overlap(nest->jpath.outerjoinpath->parent->relids,
 					   batched_relids);
 }
+#endif
 
->>>>>>> createplan.c
 static NestLoop *
 create_nestloop_plan(PlannerInfo *root,
 					 NestPath *best_path)
@@ -5369,22 +5312,16 @@ create_nestloop_plan(PlannerInfo *root,
 	List	   *nestParams;
 	Relids		saveOuterRels = root->curOuterRels;
 
-<<<<<<< createplan.c
 	bool yb_is_batched;
 	size_t yb_num_hashClauseInfos;
 	YbBNLHashClauseInfo *yb_hashClauseInfos;
 
 	/* NestLoop can project, so no need to be picky about child tlists */
-	outer_plan = create_plan_recurse(root, best_path->outerjoinpath, 0);
-=======
-	/* NestLoop can project, so no need to be picky about child tlists */
 	outer_plan = create_plan_recurse(root, best_path->jpath.outerjoinpath, 0);
->>>>>>> createplan.c
 
 	/* For a nestloop, include outer relids in curOuterRels for inner side */
 	root->curOuterRels = bms_union(root->curOuterRels,
-<<<<<<< createplan.c
-								   best_path->outerjoinpath->parent->relids);
+								   best_path->jpath.outerjoinpath->parent->relids);
 
 	Relids prev_yb_cur_batched_relids = root->yb_cur_batched_relids;
 
@@ -5395,28 +5332,7 @@ create_nestloop_plan(PlannerInfo *root,
 
 	yb_is_batched = yb_is_nestloop_batched(best_path);
 
-	outerrelids = best_path->outerjoinpath->parent->relids;
-=======
-								   best_path->jpath.outerjoinpath->parent->relids);
-
-	Relids prev_yb_curbatchedrelids = root->yb_curbatchedrelids;
-
-	Relids batched_relids = get_batched_relids(best_path);
-
-	root->yb_curbatchedrelids = bms_union(root->yb_curbatchedrelids,
-										  batched_relids);
-
-	bool is_batched = is_nestloop_batched(best_path);
-
-	inner_plan = create_plan_recurse(root, best_path->jpath.innerjoinpath, 0);
-
-	bms_free(root->yb_curbatchedrelids);
-	root->yb_curbatchedrelids = prev_yb_curbatchedrelids;
-
-	/* Restore curOuterRels */
-	bms_free(root->curOuterRels);
-	root->curOuterRels = saveOuterRels;
->>>>>>> createplan.c
+	outerrelids = best_path->jpath.outerjoinpath->parent->relids;
 
 	/* Sort join qual clauses into best execution order */
 	joinrestrictclauses = order_qual_clauses(root, joinrestrictclauses);
@@ -5436,7 +5352,6 @@ create_nestloop_plan(PlannerInfo *root,
 		otherclauses = NIL;
 	}
 
-<<<<<<< createplan.c
 	if (yb_is_batched)
 	{
 		/* Add the available batched outer rels. */
@@ -5511,11 +5426,7 @@ create_nestloop_plan(PlannerInfo *root,
 	root->curOuterRels = saveOuterRels;
 
 	/* Replace any outer-relation variables with nestloop params */
-	if (best_path->path.param_info)
-=======
-	/* Replace any outer-relation variables with nestloop params */
 	if (best_path->jpath.path.param_info)
->>>>>>> createplan.c
 	{
 		joinclauses = (List *)
 			replace_nestloop_params(root, (Node *) joinclauses);
@@ -5523,55 +5434,13 @@ create_nestloop_plan(PlannerInfo *root,
 			replace_nestloop_params(root, (Node *) otherclauses);
 	}
 
+	nestParams = identify_current_nestloop_params(root, outerrelids);
 	/*
 	 * Identify any nestloop parameters that should be supplied by this join
 	 * node, and remove them from root->curOuterParams.
 	 */
-<<<<<<< createplan.c
-	nestParams = identify_current_nestloop_params(root, outerrelids);
 	if (yb_is_batched)
 	{
-=======
-	outerrelids = best_path->jpath.outerjoinpath->parent->relids;
-	nestParams = identify_current_nestloop_params(root, outerrelids);
-
-	Relids batched_outerrellids = bms_intersect(outerrelids,
-												batched_relids);
-
-	Relids inner_relids = best_path->jpath.innerjoinpath->parent->relids;
-
-	/*
-	 * We currently only support batching where the join expression is a simple
-	 * (outer_var = inner_var) expression.
-	 */
-
-	ListCell *l;
-	List *hashOps = NIL;
-
-	if (is_batched)
-	{
-		foreach(l, joinrestrictclauses)
-		{
-			RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
-			if (rinfo->can_join &&
-				OidIsValid(rinfo->hashjoinoperator) &&
-				can_batch_rinfo(rinfo, batched_outerrellids, inner_relids))
-			{
-				/* if nlhash can process this */
-				Assert(is_opclause(rinfo->clause));
-				RestrictInfo *batched_rinfo =
-					get_batched_restrictinfo(rinfo,batched_outerrellids,
-											 inner_relids);
-				hashOps =
-					lappend_oid(hashOps,
-								((OpExpr *) batched_rinfo->clause)->opno);
-			}
-			else
-			{
-				hashOps = lappend_oid(hashOps, InvalidOid);
-			}
-		}
->>>>>>> createplan.c
 		join_plan =
 			(NestLoop *) make_YbBatchedNestLoop(tlist,
 												joinclauses,
@@ -5579,16 +5448,10 @@ create_nestloop_plan(PlannerInfo *root,
 												nestParams,
 												outer_plan,
 												inner_plan,
-<<<<<<< createplan.c
-												best_path->jointype,
-												best_path->inner_unique,
-												yb_num_hashClauseInfos,
-												yb_hashClauseInfos);
-=======
 												best_path->jpath.jointype,
 												best_path->jpath.inner_unique,
-												hashOps);
->>>>>>> createplan.c
+												yb_num_hashClauseInfos,
+												yb_hashClauseInfos);
 	}
 	else
 	{
@@ -6268,186 +6131,24 @@ fix_indexqual_references(PlannerInfo *root, IndexPath *index_path,
 						 List **stripped_indexquals_p, List **fixed_indexquals_p)
 {
 	IndexOptInfo *index = index_path->indexinfo;
-<<<<<<< createplan.c
 	List	   *fixed_indexquals;
-	ListCell   *lcc,
-			   *lci;
+	ListCell   *lcc;
+	ListCell   *lci;
+	List *batched_rinfos = NIL;
 
 	fixed_indexquals = NIL;
 
-	List *batched_rinfos = NIL;
-
-	forboth(lcc, index_path->indexquals, lci, index_path->indexqualcols)
-	{
-		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lcc);
-		RestrictInfo *tmp_batched =
-			get_batched_restrictinfo(rinfo,
-									 root->yb_cur_batched_relids,
-									 index_path->indexinfo->rel->relids);
-
-		if (tmp_batched)
-		{
-			if (list_member_ptr(batched_rinfos, tmp_batched))
-				continue;
-			rinfo = tmp_batched;
-			batched_rinfos = lappend(batched_rinfos, tmp_batched);
-		}
-
-		int			indexcol = lfirst_int(lci);
-		Node	   *clause;
-
-		/*
-		 * Replace any outer-relation variables with nestloop params.
-		 *
-		 * This also makes a copy of the clause, so it's safe to modify it
-		 * in-place below.
-		 */
-		clause = replace_nestloop_params(root, (Node *) rinfo->clause);
-
-		if (IsA(clause, OpExpr))
-		{
-			OpExpr	   *op = (OpExpr *) clause;
-
-			if (list_length(op->args) != 2)
-				elog(ERROR, "indexqual clause is not binary opclause");
-
-			/*
-			 * Check to see if the indexkey is on the right; if so, commute
-			 * the clause.  The indexkey should be the side that refers to
-			 * (only) the base relation.
-			 */
-			if (!bms_equal(rinfo->left_relids, index->rel->relids))
-				CommuteOpExpr(op);
-
-			/*
-			 * Now replace the indexkey expression with an index Var.
-			 */
-			linitial(op->args) = fix_indexqual_operand(linitial(op->args),
-													   index,
-													   indexcol);
-		}
-		else if (IsA(clause, RowCompareExpr))
-		{
-			RowCompareExpr *rc = (RowCompareExpr *) clause;
-			Expr	   *newrc;
-			List	   *indexcolnos;
-			bool		var_on_left;
-			ListCell   *lca,
-					   *lcai;
-
-			/*
-			 * Re-discover which index columns are used in the rowcompare.
-			 */
-			newrc = adjust_rowcompare_for_index(rc,
-												index,
-												indexcol,
-												&indexcolnos,
-												&var_on_left);
-
-			/*
-			 * Trouble if adjust_rowcompare_for_index thought the
-			 * RowCompareExpr didn't match the index as-is; the clause should
-			 * have gone through that routine already.
-			 */
-			if (newrc != (Expr *) rc)
-				elog(ERROR, "inconsistent results from adjust_rowcompare_for_index");
-
-			/*
-			 * Check to see if the indexkey is on the right; if so, commute
-			 * the clause.
-			 */
-			if (!var_on_left)
-				CommuteRowCompareExpr(rc);
-
-			/*
-			 * Now replace the indexkey expressions with index Vars.
-			 */
-			Assert(list_length(rc->largs) == list_length(indexcolnos));
-			forboth(lca, rc->largs, lcai, indexcolnos)
-			{
-				lfirst(lca) = fix_indexqual_operand(lfirst(lca),
-													index,
-													lfirst_int(lcai));
-			}
-		}
-		else if (IsA(clause, ScalarArrayOpExpr) &&
-				 IsA(linitial(((ScalarArrayOpExpr*) clause)->args), RowExpr))
-		{
-			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
-
-			RowExpr *leftrow = linitial(saop->args);
-
-			ListCell *lc;
-			foreach(lc, leftrow->args)
-			{
-				Node *operand = lfirst(lc);
-				for(int i = 0; i < index->nkeycolumns; i++)
-				{
-					if(match_index_to_operand(operand, i, index))
-					{
-						lfirst(lc) = fix_indexqual_operand(operand, index, i);
-					}
-				}
-			}
-		}
-		else if (IsA(clause, ScalarArrayOpExpr))
-		{
-			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
-
-			/* Never need to commute... */
-
-			/* Replace the indexkey expression with an index Var. */
-			linitial(saop->args) = fix_indexqual_operand(linitial(saop->args),
-														 index,
-														 indexcol);
-		}
-		else if (IsA(clause, NullTest))
-		{
-			NullTest   *nt = (NullTest *) clause;
-
-			/* Replace the indexkey expression with an index Var. */
-			nt->arg = (Expr *) fix_indexqual_operand((Node *) nt->arg,
-													 index,
-													 indexcol);
-		}
-		else
-			elog(ERROR, "unsupported indexqual type: %d",
-				 (int) nodeTag(clause));
-
-		fixed_indexquals = lappend(fixed_indexquals, clause);
-	}
-
-	return fixed_indexquals;
-=======
-	List	   *stripped_indexquals;
-	List	   *fixed_indexquals;
-	ListCell   *lc;
-
-	stripped_indexquals = fixed_indexquals = NIL;
-
 	/* YB_TODO(Tanuj@yugabyte)
-	 * - Need to insert YB processing for stripped_indexquals here.
-	 * - Not able to merge the following code.
-	 *
-	 * Build "stripped" indexquals structure (no RestrictInfos) to pass to
-	 * executor as indexqualorig
-	 *
-	stripped_indexquals =
-		!bms_is_empty(root->yb_curbatchedrelids)
-		? get_actual_batched_clauses(root->yb_curbatchedrelids,
-									 indexquals,
-									 best_path)
-		: get_actual_clauses(indexquals);
+	 * - Need to track Tanuj's work on this function and rework. His code needs reimplementation to
+	 *   match Postgres's new code.
+	 * - I removed his work for now.
 	 */
-
 	foreach(lc, index_path->indexclauses)
 	{
 		IndexClause *iclause = lfirst_node(IndexClause, lc);
 		int			indexcol = iclause->indexcol;
 		ListCell   *lc2;
 
-		/* YB_TODO(Tanuj@yugabyte)
-		 * This following code needs reimplementation to match Postgres's new code.
 
 		RestrictInfo *rinfo = lfirst_node(RestrictInfo, lcc);
 		RestrictInfo *tmp_batched =
@@ -6474,7 +6175,6 @@ fix_indexqual_references(PlannerInfo *root, IndexPath *index_path,
 
 	*stripped_indexquals_p = stripped_indexquals;
 	*fixed_indexquals_p = fixed_indexquals;
->>>>>>> createplan.c
 }
 
 /*

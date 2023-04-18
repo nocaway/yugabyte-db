@@ -1278,22 +1278,6 @@ create_append_path(PlannerInfo *root,
 
 	/*
 	 * When generating an Append path for a partitioned table, there may be
-<<<<<<< pathnode.c
-	 * parameters that are useful so we can eliminate certain partitions
-	 * during execution.  Here we'll go all the way and fully populate the
-	 * parameter info data as we do for normal base relations.  However, we
-	 * need only bother doing this for RELOPT_BASEREL rels, as
-	 * RELOPT_OTHER_MEMBER_REL's Append paths are merged into the base rel's
-	 * Append subpaths.  It would do no harm to do this, we just avoid it to
-	 * save wasting effort.
-	 */
-	if (partitioned_rels != NIL && root && rel->reloptkind == RELOPT_BASEREL)
-	{
-		/* YB: Accumulate batching info from subpaths for this "baserel". */
-		Assert(root->yb_cur_batched_relids == NULL);
-		yb_accumulate_batching_info(subpaths,
-			&root->yb_cur_batched_relids, &root->yb_cur_unbatched_relids);
-=======
 	 * parameterized quals that are useful for run-time pruning.  Hence,
 	 * compute path.param_info the same way as for any other baserel, so that
 	 * such quals will be available for make_partition_pruneinfo().  (This
@@ -1302,7 +1286,12 @@ create_append_path(PlannerInfo *root,
 	 * we don't have "root", too.)
 	 */
 	if (root && rel->reloptkind == RELOPT_BASEREL && IS_PARTITIONED_REL(rel))
->>>>>>> pathnode.c
+	{
+		/* YB: Accumulate batching info from subpaths for this "baserel". */
+		Assert(root->yb_cur_batched_relids == NULL);
+		yb_accumulate_batching_info(subpaths,
+			&root->yb_cur_batched_relids, &root->yb_cur_unbatched_relids);
+
 		pathnode->path.param_info = get_baserel_parampathinfo(root,
 															  rel,
 															  required_outer);

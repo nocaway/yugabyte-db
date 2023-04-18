@@ -14,21 +14,15 @@
  */
 #include "postgres.h"
 
-<<<<<<< restrictinfo.c
-#include "catalog/pg_operator.h"
-#include "catalog/pg_type.h"
-
-#include "optimizer/clauses.h"
-#include "optimizer/restrictinfo.h"
-#include "optimizer/var.h"
-=======
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/restrictinfo.h"
->>>>>>> restrictinfo.c
 
+/* Yugabyte includes */
+#include "catalog/pg_operator.h"
+#include "catalog/pg_type.h"
 
 static RestrictInfo *make_restrictinfo_internal(PlannerInfo *root,
 												Expr *clause,

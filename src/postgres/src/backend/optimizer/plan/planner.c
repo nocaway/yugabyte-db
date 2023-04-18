@@ -633,8 +633,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	root->grouping_map = NULL;
 	root->minmax_aggs = NIL;
 	root->qual_security_level = 0;
-<<<<<<< planner.c
-	root->inhTargetKind = INHKIND_NONE;
+	root->hasPseudoConstantQuals = false;
+	root->hasAlternativeSubPlans = false;
 	root->hasRecursion = hasRecursion;
 	root->yb_cur_batched_relids =
 		parent_root ? parent_root->yb_cur_batched_relids
@@ -643,12 +643,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 		parent_root ? parent_root->yb_cur_unbatched_relids : NULL;
 	root->yb_availBatchedRelids =
 		parent_root ? parent_root->yb_availBatchedRelids : NULL;
-=======
-	root->hasPseudoConstantQuals = false;
-	root->hasAlternativeSubPlans = false;
-	root->hasRecursion = hasRecursion;
-	root->yb_curbatchedrelids = parent_root ? parent_root->yb_curbatchedrelids : NULL;
->>>>>>> planner.c
 	root->yb_cur_batch_no = -1;
 	if (hasRecursion)
 		root->wt_param_id = assign_special_exec_param(root);

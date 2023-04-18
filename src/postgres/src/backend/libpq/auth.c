@@ -41,33 +41,23 @@
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/timestamp.h"
+#include "utils/builtins.h"
 
-<<<<<<< auth.c
 #include "access/htup_details.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "commands/yb_profile.h"
 #include "pg_yb_utils.h"
 #include "utils/syscache.h"
-=======
-#include "utils/builtins.h"
 #include "pg_yb_utils.h"
->>>>>>> auth.c
 #include "yb/yql/pggate/ybc_pggate.h"
 
 /*----------------------------------------------------------------
  * Global authentication functions
  *----------------------------------------------------------------
  */
-<<<<<<< auth.c
-static void sendAuthRequest(Port *port, AuthRequest areq, const char *extradata,
-				int extralen);
-static void auth_failed(Port *port, int status, char *logdetail, bool lockout);
-static char *recv_password_packet(Port *port);
-=======
-static void auth_failed(Port *port, int status, const char *logdetail);
+static void auth_failed(Port *port, int status, const char *logdetail, bool lockout);
 static char *recv_password_packet(Port *port);
 static void set_authn_id(Port *port, const char *id);
->>>>>>> auth.c
 
 
 /*----------------------------------------------------------------
@@ -271,11 +261,7 @@ ClientAuthentication_hook_type ClientAuthentication_hook = NULL;
  * particular, if logdetail isn't NULL, we send that string to the log.
  */
 static void
-<<<<<<< auth.c
 auth_failed(Port *port, int status, char *logdetail, bool yb_role_is_locked_out)
-=======
-auth_failed(Port *port, int status, const char *logdetail)
->>>>>>> auth.c
 {
 	const char *errstr;
 	char	   *cdetail;
