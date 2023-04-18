@@ -38,14 +38,10 @@
 #include "utils/fmgroids.h"
 #include "utils/syscache.h"
 #include "utils/timestamp.h"
-<<<<<<< user.c
-#include "utils/tqual.h"
 
 #include "catalog/pg_yb_role_profile.h"
 #include "commands/yb_profile.h"
 #include "pg_yb_utils.h"
-=======
->>>>>>> user.c
 
 /* Potentially set by pg_upgrade_support functions */
 Oid			binary_upgrade_next_pg_authid_oid = InvalidOid;
@@ -516,12 +512,6 @@ AlterRole(ParseState *pstate, AlterRoleStmt *stmt)
 	char	   *validUntil = NULL;	/* time the login is valid until */
 	Datum		validUntil_datum;	/* same, as timestamptz Datum */
 	bool		validUntil_null;
-<<<<<<< user.c
-	int			bypassrls = -1;
-	char       *profile = NULL;
-	int			unlocked = -1;
-=======
->>>>>>> user.c
 	DefElem    *dpassword = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
@@ -533,10 +523,13 @@ AlterRole(ParseState *pstate, AlterRoleStmt *stmt)
 	DefElem    *drolemembers = NULL;
 	DefElem    *dvalidUntil = NULL;
 	DefElem    *dbypassRLS = NULL;
+	Oid			roleid;
+
+	char       *profile = NULL;
+	int			unlocked = -1;
 	DefElem    *dprofile = NULL;
 	DefElem    *dnoprofile = NULL;
 	DefElem    *dunlocked = NULL;
-	Oid			roleid;
 
 	check_rolespec_name(stmt->role,
 						_("Cannot alter reserved roles."));
@@ -654,15 +647,11 @@ AlterRole(ParseState *pstate, AlterRoleStmt *stmt)
 	}
 	if (dvalidUntil)
 		validUntil = strVal(dvalidUntil->arg);
-<<<<<<< user.c
-	if (dbypassRLS)
-		bypassrls = intVal(dbypassRLS->arg);
+
 	if (dprofile && dprofile->arg)
 		profile = strVal(dprofile->arg);
 	if (dunlocked && dunlocked->arg)
 		unlocked = intVal(dunlocked->arg);
-=======
->>>>>>> user.c
 
 	/*
 	 * Scan the pg_authid relation to be certain the user exists.

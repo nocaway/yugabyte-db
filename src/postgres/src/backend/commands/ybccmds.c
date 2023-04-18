@@ -1277,7 +1277,6 @@ YBCPrepareAlterTableCmd(AlterTableCmd* cmd, Relation rel, List *handles,
 			if (cmd->subtype == AT_AttachPartition ||
 				cmd->subtype == AT_DetachPartition)
 			{
-<<<<<<< ybccmds.c
 				RangeVar *partition_rv = ((PartitionCmd *)cmd->def)->name;
 				Relation r = relation_openrv(partition_rv, AccessExclusiveLock);
 				char relkind = r->rd_rel->relkind;
@@ -1292,11 +1291,9 @@ YBCPrepareAlterTableCmd(AlterTableCmd* cmd, Relation rel, List *handles,
 					return handles;
 				}
 
-				dependent_rel = heap_openrv(partition_rv, AccessExclusiveLock);
-=======
 				dependent_rel = table_openrv(((PartitionCmd *)cmd->def)->name,
 											AccessExclusiveLock);
->>>>>>> ybccmds.c
+
 				/*
 				 * If the partition table is not YB supported table including
 				 * foreign table, skip schema version increment.

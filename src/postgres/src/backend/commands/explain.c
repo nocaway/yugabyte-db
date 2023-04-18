@@ -234,14 +234,10 @@ ExplainQuery(ParseState *pstate, ExplainStmt *stmt,
 					 parser_errposition(pstate, opt->location)));
 	}
 
-<<<<<<< explain.c
 	if (es->analyze)
 		yb_run_with_explain_analyze = true;
 
-	if (es->buffers && !es->analyze)
-=======
 	if (es->wal && !es->analyze)
->>>>>>> explain.c
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("EXPLAIN option WAL requires ANALYZE")));

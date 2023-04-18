@@ -1969,63 +1969,18 @@ findTypeInputFunction(List *procname, Oid typeOid)
 
 	/*
 	 * Input functions can take a single argument of type CSTRING, or three
-<<<<<<< typecmds.c
-	 * arguments (string, typioparam OID, typmod).
-	 *
-	 * For backwards compatibility we allow OPAQUE in place of CSTRING; if we
-	 * see this, we issue a warning and fix up the pg_proc entry.
-	 *
-	 * Whine about ambiguity if multiple forms exist.
-=======
 	 * arguments (string, typioparam OID, typmod).  Whine about ambiguity if
 	 * both forms exist.
->>>>>>> typecmds.c
 	 */
 	argList[0] = CSTRINGOID;
 	argList[1] = OIDOID;
 	argList[2] = INT4OID;
 
-<<<<<<< typecmds.c
+	/* YB_TODO(neil) Yugabyte has some changes here.
+	 * Check if it's still valid in Pg15.
+	 */
 	procOid = LookupFuncName(procname, 1, argList, true);
-	if (OidIsValid(procOid))
-		nmatches++;
 	procOid2 = LookupFuncName(procname, 3, argList, true);
-	if (OidIsValid(procOid2))
-		nmatches++;
-
-	argList[0] = OPAQUEOID;
-
-	procOid3 = LookupFuncName(procname, 1, argList, true);
-	if (OidIsValid(procOid3))
-		nmatches++;
-=======
-	procOid = LookupFuncName(procname, 1, argList, true);
->>>>>>> typecmds.c
-<<<<<<< typecmds.c
-	procOid4 = LookupFuncName(procname, 3, argList, true);
-	if (OidIsValid(procOid4))
-		nmatches++;
-
-	if (nmatches > 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_AMBIGUOUS_FUNCTION),
-				 errmsg("type input function %s has multiple matches",
-						NameListToString(procname))));
-
-	if (OidIsValid(procOid))
-		return procOid;
-	if (OidIsValid(procOid2))
-		return procOid2;
-
-	/* Cases with OPAQUE need adjustment */
-	if (OidIsValid(procOid3))
-		procOid = procOid3;
-	else
-		procOid = procOid4;
-
-=======
-	procOid2 = LookupFuncName(procname, 3, argList, true);
->>>>>>> typecmds.c
 	if (OidIsValid(procOid))
 	{
 		if (OidIsValid(procOid2))
@@ -2127,24 +2082,6 @@ findTypeReceiveFunction(List *procname, Oid typeOid)
 	if (OidIsValid(procOid))
 	{
 		if (OidIsValid(procOid2))
-<<<<<<< typecmds.c
-			ereport(ERROR,
-					(errcode(ERRCODE_AMBIGUOUS_FUNCTION),
-					 errmsg("type receive function %s has multiple matches",
-							NameListToString(procname))));
-		return procOid;
-	}
-	else if (OidIsValid(procOid2))
-		return procOid2;
-
-	/* If not found, reference the 1-argument signature in error msg */
-	ereport(ERROR,
-			(errcode(ERRCODE_UNDEFINED_FUNCTION),
-			 errmsg("function %s does not exist",
-					func_signature_string(procname, 1, NIL, argList))));
-
-	return InvalidOid;			/* keep compiler quiet */
-=======
 			ereport(ERROR,
 					(errcode(ERRCODE_AMBIGUOUS_FUNCTION),
 					 errmsg("type receive function %s has multiple matches",
@@ -2176,7 +2113,6 @@ findTypeReceiveFunction(List *procname, Oid typeOid)
 						NameListToString(procname))));
 
 	return procOid;
->>>>>>> typecmds.c
 }
 
 static Oid

@@ -967,13 +967,11 @@ createdb(ParseState *pstate, const CreatedbStmt *stmt)
 	}
 	if (dcolocated && dcolocated->arg)
 		dbcolocated = defGetBoolean(dcolocated);
-<<<<<<< dbcommands.c
 	else
 		dbcolocated = YBColocateDatabaseByDefault();
-=======
+
 	if (dcollversion)
 		dbcollversion = defGetString(dcollversion);
->>>>>>> dbcommands.c
 
 	/* obtain OID of proposed owner */
 	if (dbowner)

@@ -2931,14 +2931,10 @@ ExecBSUpdateTriggers(EState *estate, ResultRelInfo *relinfo)
 								   CMD_UPDATE))
 		return;
 
-<<<<<<< trigger.c
-	updatedCols = ExecGetUpdatedCols(relinfo, estate);
-=======
 	/* statement-level triggers operate on the parent table */
 	Assert(relinfo->ri_RootResultRelInfo == NULL);
 
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
->>>>>>> trigger.c
 
 	LocTriggerData.type = T_TriggerData;
 	LocTriggerData.tg_event = TRIGGER_EVENT_UPDATE |
@@ -2983,19 +2979,12 @@ ExecASUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 	Assert(relinfo->ri_RootResultRelInfo == NULL);
 
 	if (trigdesc && trigdesc->trig_update_after_statement)
-<<<<<<< trigger.c
-		AfterTriggerSaveEvent(estate, relinfo, TRIGGER_EVENT_UPDATE,
-							  false, NULL, NULL, NIL,
-							  ExecGetUpdatedCols(relinfo, estate),
-							  transition_capture);
-=======
 		AfterTriggerSaveEvent(estate, relinfo, NULL, NULL,
 							  TRIGGER_EVENT_UPDATE,
 							  false, NULL, NULL, NIL,
 							  ExecGetAllUpdatedCols(relinfo, estate),
 							  transition_capture,
 							  false);
->>>>>>> trigger.c
 }
 
 bool
@@ -3068,14 +3057,8 @@ ExecBRUpdateTriggers(EState *estate, EPQState *epqstate,
 		TRIGGER_EVENT_ROW |
 		TRIGGER_EVENT_BEFORE;
 	LocTriggerData.tg_relation = relinfo->ri_RelationDesc;
-<<<<<<< trigger.c
-	LocTriggerData.tg_oldtable = NULL;
-	LocTriggerData.tg_newtable = NULL;
-	updatedCols = ExecGetUpdatedCols(relinfo, estate);
-=======
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
 	LocTriggerData.tg_updatedcols = updatedCols;
->>>>>>> trigger.c
 	for (i = 0; i < trigdesc->numtriggers; i++)
 	{
 		Trigger    *trigger = &trigdesc->triggers[i];
@@ -3172,24 +3155,6 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 		 * separately for DELETE and INSERT to capture transition table rows.
 		 * In such case, either old tuple or new tuple can be NULL.
 		 */
-<<<<<<< trigger.c
-		if (fdw_trigtuple == NULL && ItemPointerIsValid(tupleid))
-			trigtuple = GetTupleForTrigger(estate,
-										   NULL,
-										   relinfo,
-										   tupleid,
-										   LockTupleExclusive,
-										   NULL);
-		else
-			trigtuple = fdw_trigtuple;
-
-		AfterTriggerSaveEvent(estate, relinfo, TRIGGER_EVENT_UPDATE,
-							  true, trigtuple, newtuple, recheckIndexes,
-							  ExecGetUpdatedCols(relinfo, estate),
-							  transition_capture);
-		if (trigtuple != fdw_trigtuple)
-			heap_freetuple(trigtuple);
-=======
 		TupleTableSlot *oldslot;
 		ResultRelInfo *tupsrc;
 
@@ -3221,7 +3186,6 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 							  ExecGetAllUpdatedCols(relinfo, estate),
 							  transition_capture,
 							  is_crosspart_update);
->>>>>>> trigger.c
 	}
 }
 

@@ -121,14 +121,15 @@
 #include "utils/typcache.h"
 
 /* YB includes. */
+#include "pg_yb_utils.h"
 #include "catalog/binary_upgrade.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
-<<<<<<< tablecmds.c
 #include "catalog/pg_policy.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/pg_statistic_ext.h"
 #include "commands/dbcommands.h"
+#include "commands/tablegroup.h"
 #include "commands/view.h"
 #include "commands/ybccmds.h"
 #include "executor/ybcModifyTable.h"
@@ -136,13 +137,6 @@
 #include "pg_yb_utils.h"
 #include "statistics/statistics.h"
 #include "utils/regproc.h"
-=======
-#include "commands/dbcommands.h"
-#include "commands/ybccmds.h"
-#include "commands/tablegroup.h"
-#include "executor/ybcModifyTable.h"
-#include "pg_yb_utils.h"
->>>>>>> tablecmds.c
 
 /*
  * ON COMMIT action list
@@ -673,10 +667,11 @@ static ObjectAddress ATExecAttachPartitionIdx(List **wqueue, Relation rel,
 											  RangeVar *name);
 static void validatePartitionedIndex(Relation partedIdx, Relation partedTbl);
 static void refuseDupeIndexAttach(Relation parentIdx, Relation partIdx,
-<<<<<<< tablecmds.c
-					  Relation partitionTbl);
-static void update_relispartition(Relation classRel, Oid relationId,
-					  bool newval);
+								  Relation partitionTbl);
+static List *GetParentedForeignKeyRefs(Relation partition);
+static void ATDetachCheckNoForeignKeyRefs(Relation partition);
+static char GetAttributeCompression(Oid atttypid, char *compression);
+
 static void ybCopyMiscMetadata(Relation oldRel, Relation newRel,
 							   AttrNumber* attmap);
 static void ybCopyPolicyObjects(Relation oldRel, Relation newRel,
@@ -684,13 +679,6 @@ static void ybCopyPolicyObjects(Relation oldRel, Relation newRel,
 static void ybCopyStats(Oid oldRelid, RangeVar *newRel, Oid newRelid,
 						AttrNumber *attmap);
 static void ybReplaceViewQueries(List *view_oids, List *view_queries);
-=======
-								  Relation partitionTbl);
-static List *GetParentedForeignKeyRefs(Relation partition);
-static void ATDetachCheckNoForeignKeyRefs(Relation partition);
-static char GetAttributeCompression(Oid atttypid, char *compression);
-
->>>>>>> tablecmds.c
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -20943,30 +20931,88 @@ GetParentedForeignKeyRefs(Relation partition)
  * referenced values exist.
  */
 static void
-<<<<<<< tablecmds.c
-update_relispartition(Relation classRel, Oid relationId, bool newval)
+ATDetachCheckNoForeignKeyRefs(Relation partition)
 {
-	HeapTuple	tup;
-	HeapTuple	newtup;
-	Form_pg_class classForm;
-	bool		opened = false;
+	List	   *constraints;
+	ListCell   *cell;
 
-	if (classRel == NULL)
+	constraints = GetParentedForeignKeyRefs(partition);
+
+	foreach(cell, constraints)
 	{
-		classRel = heap_open(RelationRelationId, RowExclusiveLock);
-		opened = true;
+		Oid			constrOid = lfirst_oid(cell);
+		HeapTuple	tuple;
+		Form_pg_constraint constrForm;
+		Relation	rel;
+		Trigger		trig;
+
+		tuple = SearchSysCache1(CONSTROID, ObjectIdGetDatum(constrOid));
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for constraint %u", constrOid);
+		constrForm = (Form_pg_constraint) GETSTRUCT(tuple);
+
+		Assert(OidIsValid(constrForm->conparentid));
+		Assert(constrForm->confrelid == RelationGetRelid(partition));
+
+		/* prevent data changes into the referencing table until commit */
+		rel = table_open(constrForm->conrelid, ShareLock);
+
+		MemSet(&trig, 0, sizeof(trig));
+		trig.tgoid = InvalidOid;
+		trig.tgname = NameStr(constrForm->conname);
+		trig.tgenabled = TRIGGER_FIRES_ON_ORIGIN;
+		trig.tgisinternal = true;
+		trig.tgconstrrelid = RelationGetRelid(partition);
+		trig.tgconstrindid = constrForm->conindid;
+		trig.tgconstraint = constrForm->oid;
+		trig.tgdeferrable = false;
+		trig.tginitdeferred = false;
+		/* we needn't fill in remaining fields */
+
+		RI_PartitionRemove_Check(&trig, rel, partition);
+
+		ReleaseSysCache(tuple);
+
+		table_close(rel, NoLock);
 	}
+}
 
-	tup = SearchSysCache1(RELOID, ObjectIdGetDatum(relationId));
-	newtup = heap_copytuple(tup);
-	classForm = (Form_pg_class) GETSTRUCT(newtup);
-	classForm->relispartition = newval;
-	CatalogTupleUpdate(classRel, &tup->t_self, newtup);
-	heap_freetuple(newtup);
-	ReleaseSysCache(tup);
+/*
+ * resolve column compression specification to compression method.
+ */
+static char
+GetAttributeCompression(Oid atttypid, char *compression)
+{
+	char		cmethod;
 
-	if (opened)
-		heap_close(classRel, RowExclusiveLock);
+	if (compression == NULL || strcmp(compression, "default") == 0)
+		return InvalidCompressionMethod;
+
+	/*
+	 * To specify a nondefault method, the column data type must be toastable.
+	 * Note this says nothing about whether the column's attstorage setting
+	 * permits compression; we intentionally allow attstorage and
+	 * attcompression to be independent.  But with a non-toastable type,
+	 * attstorage could not be set to a value that would permit compression.
+	 *
+	 * We don't actually need to enforce this, since nothing bad would happen
+	 * if attcompression were non-default; it would never be consulted.  But
+	 * it seems more user-friendly to complain about a certainly-useless
+	 * attempt to set the property.
+	 */
+	if (!TypeIsToastable(atttypid))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("column data type %s does not support compression",
+						format_type_be(atttypid))));
+
+	cmethod = CompressionNameToMethod(compression);
+	if (!CompressionMethodIsValid(cmethod))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid compression method \"%s\"", compression)));
+
+	return cmethod;
 }
 
 /*
@@ -21389,88 +21435,3 @@ ybCopyStats(Oid oldRelid, RangeVar *newRel, Oid newRelid, AttrNumber* attmap)
 	systable_endscan(scan);
 	heap_close(pg_statistic, RowExclusiveLock);
 }
-=======
-ATDetachCheckNoForeignKeyRefs(Relation partition)
-{
-	List	   *constraints;
-	ListCell   *cell;
-
-	constraints = GetParentedForeignKeyRefs(partition);
-
-	foreach(cell, constraints)
-	{
-		Oid			constrOid = lfirst_oid(cell);
-		HeapTuple	tuple;
-		Form_pg_constraint constrForm;
-		Relation	rel;
-		Trigger		trig;
-
-		tuple = SearchSysCache1(CONSTROID, ObjectIdGetDatum(constrOid));
-		if (!HeapTupleIsValid(tuple))
-			elog(ERROR, "cache lookup failed for constraint %u", constrOid);
-		constrForm = (Form_pg_constraint) GETSTRUCT(tuple);
-
-		Assert(OidIsValid(constrForm->conparentid));
-		Assert(constrForm->confrelid == RelationGetRelid(partition));
-
-		/* prevent data changes into the referencing table until commit */
-		rel = table_open(constrForm->conrelid, ShareLock);
-
-		MemSet(&trig, 0, sizeof(trig));
-		trig.tgoid = InvalidOid;
-		trig.tgname = NameStr(constrForm->conname);
-		trig.tgenabled = TRIGGER_FIRES_ON_ORIGIN;
-		trig.tgisinternal = true;
-		trig.tgconstrrelid = RelationGetRelid(partition);
-		trig.tgconstrindid = constrForm->conindid;
-		trig.tgconstraint = constrForm->oid;
-		trig.tgdeferrable = false;
-		trig.tginitdeferred = false;
-		/* we needn't fill in remaining fields */
-
-		RI_PartitionRemove_Check(&trig, rel, partition);
-
-		ReleaseSysCache(tuple);
-
-		table_close(rel, NoLock);
-	}
-}
-
-/*
- * resolve column compression specification to compression method.
- */
-static char
-GetAttributeCompression(Oid atttypid, char *compression)
-{
-	char		cmethod;
-
-	if (compression == NULL || strcmp(compression, "default") == 0)
-		return InvalidCompressionMethod;
-
-	/*
-	 * To specify a nondefault method, the column data type must be toastable.
-	 * Note this says nothing about whether the column's attstorage setting
-	 * permits compression; we intentionally allow attstorage and
-	 * attcompression to be independent.  But with a non-toastable type,
-	 * attstorage could not be set to a value that would permit compression.
-	 *
-	 * We don't actually need to enforce this, since nothing bad would happen
-	 * if attcompression were non-default; it would never be consulted.  But
-	 * it seems more user-friendly to complain about a certainly-useless
-	 * attempt to set the property.
-	 */
-	if (!TypeIsToastable(atttypid))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("column data type %s does not support compression",
-						format_type_be(atttypid))));
-
-	cmethod = CompressionNameToMethod(compression);
-	if (!CompressionMethodIsValid(cmethod))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid compression method \"%s\"", compression)));
-
-	return cmethod;
-}
->>>>>>> tablecmds.c

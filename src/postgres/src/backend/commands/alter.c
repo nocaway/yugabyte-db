@@ -879,15 +879,9 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 										  newowner);
 
 		case OBJECT_YBTABLEGROUP:
-<<<<<<< alter.c
-			return AlterTablegroupOwner(strVal((Value *) stmt->object),
-										newowner);
-
-=======
 			return AlterTablegroupOwner(strVal(stmt->object),
 										newowner);
 		
->>>>>>> alter.c
 		case OBJECT_FUNCTION:
 			return AlterFunctionOwner(stmt,  newowner);
 

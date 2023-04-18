@@ -188,7 +188,6 @@ CreateTableGroup(CreateTableGroupStmt *stmt)
 	nulls[Anum_pg_yb_tablegroup_grpoptions - 1] = true;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
-<<<<<<< tablegroup.c
 
 	/*
 	 * If YB binary restore mode is set, we want to use the specified tablegroup
@@ -238,11 +237,7 @@ CreateTableGroup(CreateTableGroupStmt *stmt)
 		}
 	}
 
-	tablegroupoid = CatalogTupleInsert(rel, tuple);
-=======
-
 	CatalogTupleInsert(rel, tuple);
->>>>>>> tablegroup.c
 
 	heap_freetuple(tuple);
 
