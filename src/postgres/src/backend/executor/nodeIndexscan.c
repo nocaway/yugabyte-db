@@ -157,30 +157,14 @@ IndexNext(IndexScanState *node)
 			 * INSERTion of new rows that satisfy the query predicate. So, we set the rowmark on all
 			 * read requests sent to tserver instead of locking each tuple one by one in LockRows node.
 			 */
-<<<<<<< nodeIndexscan.c
-			ListCell   *l;
-			foreach(l, estate->es_rowMarks) {
-				ExecRowMark *erm = (ExecRowMark *) lfirst(l);
-				// Do not propogate non-row-locking row marks.
-				if (erm->markType != ROW_MARK_REFERENCE &&
-						erm->markType != ROW_MARK_COPY) {
-					scandesc->yb_exec_params->rowmark = erm->markType;
-					YBUpdateRowLockPolicyForSerializable(
-							&scandesc->yb_exec_params->wait_policy, erm->waitPolicy);
-				}
-				break;
-=======
 			if (estate->es_rowmarks && estate->es_range_table_size > 0) {
 				ExecRowMark *erm = estate->es_rowmarks[0];
 				// Do not propogate non-row-locking row marks.
 				if (erm->markType != ROW_MARK_REFERENCE && erm->markType != ROW_MARK_COPY) {
 					scandesc->yb_exec_params->rowmark = erm->markType;
-					/*
-					 * TODO(Piyush): We don't honour SKIP LOCKED yet in serializable isolation level.
-					 */
-					scandesc->yb_exec_params->wait_policy = LockWaitError;
+					YBUpdateRowLockPolicyForSerializable(
+							&scandesc->yb_exec_params->wait_policy, erm->waitPolicy);
 				}
->>>>>>> nodeIndexscan.c
 			}
 		}
 	}

@@ -273,17 +273,13 @@
 #include "utils/logtape.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-<<<<<<< nodeAgg.c
-#include "utils/numeric.h"
-#include "utils/rel.h"
-=======
->>>>>>> nodeAgg.c
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 
 /* Yugabyte includes */
 #include "catalog/yb_type.h"
 #include "utils/fmgroids.h"
+#include "utils/numeric.h"
 #include "utils/rel.h"
 
 /*

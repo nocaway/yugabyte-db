@@ -215,104 +215,11 @@ static void find_matching_subplans_recurse(PartitionPruningData *prunedata,
  * it should be estate->es_query_cxt.
  */
 PartitionTupleRouting *
-<<<<<<< execPartition.c
-ExecSetupPartitionTupleRouting(ModifyTableState *mtstate, ResultRelInfo *rootResultRelInfo)
-{
-	List	   *leaf_parts;
-	ListCell   *cell;
-	int			i;
-	ResultRelInfo *update_rri = NULL;
-	int			num_update_rri = 0,
-				update_rri_index = 0;
-	PartitionTupleRouting *proute;
-	int			nparts;
-	ModifyTable *node = mtstate ? (ModifyTable *) mtstate->ps.plan : NULL;
-=======
 ExecSetupPartitionTupleRouting(EState *estate, Relation rel)
 {
 	PartitionTupleRouting *proute;
->>>>>>> execPartition.c
 
 	/*
-<<<<<<< execPartition.c
-	 * Get the information about the partition tree after locking all the
-	 * partitions.
-	 */
-	(void) find_all_inheritors(RelationGetRelid(rootResultRelInfo->ri_RelationDesc),
-								   RowExclusiveLock, NULL);
-	proute = (PartitionTupleRouting *) palloc0(sizeof(PartitionTupleRouting));
-	proute->partition_dispatch_info =
-		RelationGetPartitionDispatchInfo(rootResultRelInfo->ri_RelationDesc,
-										 &proute->num_dispatch,
-										 &leaf_parts);
-	proute->num_partitions = nparts = list_length(leaf_parts);
-	proute->partitions =
-		(ResultRelInfo **) palloc(nparts * sizeof(ResultRelInfo *));
-	proute->parent_child_tupconv_maps =
-		(TupleConversionMap **) palloc0(nparts * sizeof(TupleConversionMap *));
-	proute->partition_oids = (Oid *) palloc(nparts * sizeof(Oid));
-
-	/* Set up details specific to the type of tuple routing we are doing. */
-	if (node && node->operation == CMD_UPDATE)
-	{
-		update_rri = mtstate->resultRelInfo;
-		num_update_rri = list_length(node->plans);
-		proute->subplan_partition_offsets =
-			palloc(num_update_rri * sizeof(int));
-		proute->num_subplan_partition_offsets = num_update_rri;
-
-		/*
-		 * We need an additional tuple slot for storing transient tuples that
-		 * are converted to the root table descriptor.
-		 */
-		proute->root_tuple_slot = MakeTupleTableSlot(RelationGetDescr(rootResultRelInfo->ri_RelationDesc));
-	}
-
-	i = 0;
-	foreach(cell, leaf_parts)
-	{
-		ResultRelInfo *leaf_part_rri = NULL;
-		Oid			leaf_oid = lfirst_oid(cell);
-
-		proute->partition_oids[i] = leaf_oid;
-
-		/*
-		 * If the leaf partition is already present in the per-subplan result
-		 * rels, we re-use that rather than initialize a new result rel. The
-		 * per-subplan resultrels and the resultrels of the leaf partitions
-		 * are both in the same canonical order. So while going through the
-		 * leaf partition oids, we need to keep track of the next per-subplan
-		 * result rel to be looked for in the leaf partition resultrels.
-		 */
-		if (update_rri_index < num_update_rri &&
-			RelationGetRelid(update_rri[update_rri_index].ri_RelationDesc) == leaf_oid)
-		{
-			leaf_part_rri = &update_rri[update_rri_index];
-
-			/*
-			 * This is required in order to convert the partition's tuple to
-			 * be compatible with the root partitioned table's tuple
-			 * descriptor.  When generating the per-subplan result rels, this
-			 * was not set.
-			 */
-			leaf_part_rri->ri_RootResultRelInfo = rootResultRelInfo;
-
-			/* Remember the subplan offset for this ResultRelInfo */
-			proute->subplan_partition_offsets[update_rri_index] = i;
-
-			update_rri_index++;
-		}
-
-		proute->partitions[i] = leaf_part_rri;
-		i++;
-	}
-
-	/*
-	 * For UPDATE, we should have found all the per-subplan resultrels in the
-	 * leaf partitions.  (If this is an INSERT, both values will be zero.)
-	 */
-	Assert(update_rri_index == num_update_rri);
-=======
 	 * Here we attempt to expend as little effort as possible in setting up
 	 * the PartitionTupleRouting.  Each partition's ResultRelInfo is built on
 	 * demand, only when we actually need to route a tuple to that partition.
@@ -331,7 +238,6 @@ ExecSetupPartitionTupleRouting(EState *estate, Relation rel)
 	 */
 	ExecInitPartitionDispatchInfo(estate, proute, RelationGetRelid(rel),
 								  NULL, 0, NULL);
->>>>>>> execPartition.c
 
 	return proute;
 }
@@ -588,20 +494,12 @@ ExecFindPartition(ModifyTableState *mtstate,
  *
  * Returns the ResultRelInfo
  */
-<<<<<<< execPartition.c
-ResultRelInfo *
-ExecInitPartitionInfo(ModifyTableState *mtstate,
-					  ResultRelInfo *rootResultRelInfo,
-					  PartitionTupleRouting *proute,
-					  EState *estate, int partidx)
-=======
 static ResultRelInfo *
 ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 					  PartitionTupleRouting *proute,
 					  PartitionDispatch dispatch,
 					  ResultRelInfo *rootResultRelInfo,
 					  int partidx)
->>>>>>> execPartition.c
 {
 	ModifyTable *node = (ModifyTable *) mtstate->ps.plan;
 	Oid			partOid = dispatch->partdesc->oids[partidx];
@@ -613,43 +511,14 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 	AttrMap    *part_attmap = NULL;
 	bool		found_whole_row;
 
-<<<<<<< execPartition.c
-	/*
-	 * We locked all the partitions in ExecSetupPartitionTupleRouting
-	 * including the leaf partitions.
-	 */
-	partrel = heap_open(proute->partition_oids[partidx], NoLock);
-
-	/*
-	 * Keep ResultRelInfo and other information for this partition in the
-	 * per-query memory context so they'll survive throughout the query.
-	 */
-	oldContext = MemoryContextSwitchTo(estate->es_query_cxt);
-
-	/*
-	 * The result relation's range table index passed into InitResultRelInfo
-	 * later gets used in the YB code-path to fetch range table entry
-	 * during ExecUpdate(). The actual nominalRelation value needs to be
-	 * passed on in order to correctly fetch the entry.
-	 */
-	int resultRelationIndex =
-			(!IsYBRelation(firstResultRel) ||
-			 partrel->rd_rel->relkind == RELKIND_FOREIGN_TABLE) ? 0 :
-			(node ? node->nominalRelation : 1);
-=======
 	oldcxt = MemoryContextSwitchTo(proute->memcxt);
 
 	partrel = table_open(partOid, RowExclusiveLock);
 
->>>>>>> execPartition.c
 	leaf_part_rri = makeNode(ResultRelInfo);
 	InitResultRelInfo(leaf_part_rri,
 					  partrel,
-<<<<<<< execPartition.c
-					  resultRelationIndex,
-=======
 					  0,
->>>>>>> execPartition.c
 					  rootResultRelInfo,
 					  estate->es_instrument);
 
@@ -879,9 +748,6 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 			 * need to create state specific to this partition.
 			 */
 			if (map == NULL)
-<<<<<<< execPartition.c
-				leaf_part_rri->ri_onConflict = rootResultRelInfo->ri_onConflict;
-=======
 			{
 				/*
 				 * It's safe to reuse these from the partition root, as we
@@ -898,7 +764,6 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 				onconfl->oc_WhereClause =
 					rootResultRelInfo->ri_onConflict->oc_WhereClause;
 			}
->>>>>>> execPartition.c
 			else
 			{
 				List	   *onconflset;

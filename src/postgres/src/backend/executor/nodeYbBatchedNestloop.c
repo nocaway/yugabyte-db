@@ -393,13 +393,9 @@ InitHash(YbBatchedNestLoopState *bnlstate)
 								 eqFuncOids, bnlstate->hashFunctions,
 								 GetBatchSize(plan), 0,
 								 econtext->ecxt_per_query_memory, tablecxt,
-<<<<<<< nodeYbBatchedNestloop.c
 								 econtext->ecxt_per_tuple_memory, econtext,
 								 false);
 
-=======
-								 econtext->ecxt_per_tuple_memory, false);
->>>>>>> nodeYbBatchedNestloop.c
 	bnlstate->hashiterinit = false;
 	bnlstate->current_hash_entry = NULL;
 }
@@ -547,11 +543,7 @@ RegisterOuterMatchHash(YbBatchedNestLoopState *bnlstate, ExprContext *econtext)
  */
 void
 AddTupleToOuterBatchHash(YbBatchedNestLoopState *bnlstate,
-<<<<<<< nodeYbBatchedNestloop.c
 						 TupleTableSlot *slot)
-{
-=======
-							  TupleTableSlot *slot)
 {
 #ifdef YB_TODO
 	/* YB_TODO(tanuj)
@@ -559,7 +551,6 @@ AddTupleToOuterBatchHash(YbBatchedNestLoopState *bnlstate,
 	 * - In the future, please don't access list attribute directly, but use the provided API by
 	 *   Postgres in pg_list.h - such as lnext().
 	 */
->>>>>>> nodeYbBatchedNestloop.c
 	TupleHashTable ht = bnlstate->hashtable;
 	bool isnew = false;
 

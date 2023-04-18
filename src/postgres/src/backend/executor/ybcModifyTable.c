@@ -320,19 +320,13 @@ static Oid YBCExecuteInsertInternal(Oid dboid,
 	YBCPgDeleteStatement(insert_stmt);
 	/* Add row into foreign key cache */
 	if (!is_single_row_txn)
-<<<<<<< ybcModifyTable.c
-		YBCPgAddIntoForeignKeyReferenceCache(relid, tuple->t_ybctid);
-
-	bms_free(pkey);
-	return HeapTupleGetOid(tuple);
-=======
 		YBCPgAddIntoForeignKeyReferenceCache(relid, HEAPTUPLE_YBCTID(tuple));
 
+	bms_free(pkey);
 #ifdef NEIL_NEED_WORK
 	/* Read typeOid from "values" and "nulls" instead of tuple header */
 #endif
 	return YbHeapTupleGetOid(tuple);
->>>>>>> ybcModifyTable.c
 }
 
 Oid YBCExecuteInsert(Relation rel,
@@ -603,20 +597,12 @@ bool YBCExecuteDelete(Relation rel,
 	/*
 	 * Look for ybctid. Raise error if ybctid is not found.
 	 *
-<<<<<<< ybcModifyTable.c
 	 * Retrieve ybctid from the slot if possible, otherwise generate it
 	 * from tuple values.
 	 */
 	if (target_tuple_fetched)
 		ybctid = YBCGetYBTupleIdFromSlot(slot);
 	else
-	{
-		HeapTuple tuple = ExecMaterializeSlot(slot);
-=======
-	 * If single row delete, generate ybctid from tuple values, otherwise
-	 * retrieve it from the slot.
-	 */
-	if (isSingleRow)
 	{
 		/*
 		 * YB_TODO(neil@yugabyte) Write Yugabyte API to work with slot.
@@ -630,7 +616,6 @@ bool YBCExecuteDelete(Relation rel,
 		 */
 		bool shouldFree = true;
 		HeapTuple tuple = ExecFetchSlotHeapTuple(slot, true, &shouldFree);
->>>>>>> ybcModifyTable.c
 		ybctid = YBCGetYBTupleIdFromTuple(rel, tuple, slot->tts_tupleDescriptor);
 	}
 
@@ -819,13 +804,8 @@ void YBCExecuteDeleteIndex(Relation index,
 }
 
 bool YBCExecuteUpdate(Relation rel,
-<<<<<<< ybcModifyTable.c
-					  TupleTableSlot *slot,
-					  HeapTuple oldtuple,
-=======
 					  ResultRelInfo *resultRelInfo,
 					  TupleTableSlot *slot,
->>>>>>> ybcModifyTable.c
 					  HeapTuple tuple,
 					  EState *estate,
 					  ModifyTable *mt_plan,
@@ -1198,17 +1178,10 @@ void YBCDeleteSysCatalogTuple(Relation rel, HeapTuple tuple)
 	Oid            relid       = RelationGetRelid(rel);
 	YBCPgStatement delete_stmt = NULL;
 
-<<<<<<< ybcModifyTable.c
-	if (tuple->t_ybctid == 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_COLUMN),
-				 errmsg("Missing column ybctid in DELETE request")));
-=======
 	if (HEAPTUPLE_YBCTID(tuple) == 0)
 		ereport(ERROR,
 		        (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg(
 				        "Missing column ybctid in DELETE request to YugaByte database")));
->>>>>>> ybcModifyTable.c
 
 	/* Prepare DELETE statement. */
 	HandleYBStatus(YBCPgNewDelete(dboid,

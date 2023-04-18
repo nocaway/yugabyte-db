@@ -1290,53 +1290,25 @@ Bitmapset *
 ExecGetInsertedCols(ResultRelInfo *relinfo, EState *estate)
 {
 	/*
-<<<<<<< execUtils.c
-	 * The columns are stored in the range table entry. If this ResultRelInfo
-	 * doesn't have an entry in the range table (i.e. if it represents a
-	 * partition routing target), fetch the parent's RTE and map the columns
-	 * to the order they are in the partition.
-=======
 	 * The columns are stored in the range table entry.  If this ResultRelInfo
 	 * represents a partition routing target, and doesn't have an entry of its
 	 * own in the range table, fetch the parent's RTE and map the columns to
 	 * the order they are in the partition.
->>>>>>> execUtils.c
 	 */
 	if (relinfo->ri_RangeTableIndex != 0)
 	{
-<<<<<<< execUtils.c
-		RangeTblEntry *rte = rt_fetch(relinfo->ri_RangeTableIndex,
-									  estate->es_range_table);
-=======
 		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
->>>>>>> execUtils.c
 
 		return rte->insertedCols;
 	}
-<<<<<<< execUtils.c
-	else
-=======
 	else if (relinfo->ri_RootResultRelInfo)
->>>>>>> execUtils.c
 	{
 		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
-<<<<<<< execUtils.c
-		RangeTblEntry *rte = rt_fetch(rootRelInfo->ri_RangeTableIndex,
-									  estate->es_range_table);
-		TupleConversionMap *map;
-
-		map = convert_tuples_by_name(RelationGetDescr(rootRelInfo->ri_RelationDesc),
-									 RelationGetDescr(relinfo->ri_RelationDesc),
-									 gettext_noop("could not convert row type"));
-		if (map != NULL)
-			return execute_attr_map_cols(rte->insertedCols, map, rootRelInfo->ri_RelationDesc);
-=======
 		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
 
 		if (relinfo->ri_RootToPartitionMap != NULL)
 			return execute_attr_map_cols(relinfo->ri_RootToPartitionMap->attrMap,
 										 rte->insertedCols);
->>>>>>> execUtils.c
 		else
 			return rte->insertedCols;
 	}
@@ -1359,39 +1331,18 @@ ExecGetUpdatedCols(ResultRelInfo *relinfo, EState *estate)
 	/* see ExecGetInsertedCols() */
 	if (relinfo->ri_RangeTableIndex != 0)
 	{
-<<<<<<< execUtils.c
-		RangeTblEntry *rte = rt_fetch(relinfo->ri_RangeTableIndex,
-									  estate->es_range_table);
-=======
 		RangeTblEntry *rte = exec_rt_fetch(relinfo->ri_RangeTableIndex, estate);
->>>>>>> execUtils.c
 
 		return rte->updatedCols;
 	}
-<<<<<<< execUtils.c
-	else
-=======
 	else if (relinfo->ri_RootResultRelInfo)
->>>>>>> execUtils.c
 	{
 		ResultRelInfo *rootRelInfo = relinfo->ri_RootResultRelInfo;
-<<<<<<< execUtils.c
-		RangeTblEntry *rte = rt_fetch(rootRelInfo->ri_RangeTableIndex,
-									  estate->es_range_table);
-		TupleConversionMap *map;
-
-		map = convert_tuples_by_name(RelationGetDescr(rootRelInfo->ri_RelationDesc),
-									 RelationGetDescr(relinfo->ri_RelationDesc),
-									 gettext_noop("could not convert row type"));
-		if (map != NULL)
-			return execute_attr_map_cols(rte->updatedCols, map, rootRelInfo->ri_RelationDesc);
-=======
 		RangeTblEntry *rte = exec_rt_fetch(rootRelInfo->ri_RangeTableIndex, estate);
 
 		if (relinfo->ri_RootToPartitionMap != NULL)
 			return execute_attr_map_cols(relinfo->ri_RootToPartitionMap->attrMap,
 										 rte->updatedCols);
->>>>>>> execUtils.c
 		else
 			return rte->updatedCols;
 	}
