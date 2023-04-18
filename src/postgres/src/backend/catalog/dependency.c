@@ -84,8 +84,6 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-<<<<<<< dependency.c
-#include "utils/tqual.h"
 
 /* YB includes */
 #include "catalog/pg_yb_profile.h"
@@ -93,12 +91,7 @@
 #include "catalog/pg_yb_tablegroup.h"
 #include "commands/ybccmds.h"
 #include "commands/yb_profile.h"
-=======
-
-#include "catalog/pg_yb_tablegroup.h"
 #include "commands/tablegroup.h"
-#include "commands/ybccmds.h"
->>>>>>> dependency.c
 #include "pg_yb_utils.h"
 
 /*
@@ -1559,12 +1552,9 @@ doDeletion(const ObjectAddress *object, int flags)
 		case OCLASS_DATABASE:
 		case OCLASS_TBLSPACE:
 		case OCLASS_SUBSCRIPTION:
-<<<<<<< dependency.c
+		case OCLASS_PARAMETER_ACL:
 		case OCLASS_YBPROFILE:
 		case OCLASS_YBROLE_PROFILE:
-=======
-		case OCLASS_PARAMETER_ACL:
->>>>>>> dependency.c
 			elog(ERROR, "global objects cannot be deleted by doDeletion");
 			break;
 

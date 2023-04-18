@@ -69,20 +69,13 @@
 
 /* Yugabyte includes */
 #include "postgres_ext.h"
-#include "utils/memutils.h"
-#include "utils/syscache.h"
-<<<<<<< pg_shdepend.c
-#include "utils/tqual.h"
-
-/* YB includes. */
 #include "catalog/pg_yb_profile_d.h"
 #include "catalog/pg_yb_role_profile_d.h"
 #include "commands/yb_profile.h"
+#include "utils/memutils.h"
+#include "utils/syscache.h"
 #include "pg_yb_utils.h"
 
-=======
-
->>>>>>> pg_shdepend.c
 typedef enum
 {
 	LOCAL_OBJECT,
@@ -1343,13 +1336,9 @@ storeObjectDescription(StringInfo descs,
 			else if (deptype == SHARED_DEPENDENCY_POLICY)
 				appendStringInfo(descs, _("target of %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_TABLESPACE)
-<<<<<<< pg_shdepend.c
-				appendStringInfo(descs, _("tablespace of %s"), objdesc);
+				appendStringInfo(descs, _("tablespace for %s"), objdesc);
 			else if (deptype == SHARED_DEPENDENCY_PROFILE)
 				appendStringInfo(descs, _("profile of %s"), objdesc);
-=======
-				appendStringInfo(descs, _("tablespace for %s"), objdesc);
->>>>>>> pg_shdepend.c
 			else
 				elog(ERROR, "unrecognized dependency type: %d",
 					 (int) deptype);
@@ -1370,11 +1359,15 @@ storeObjectDescription(StringInfo descs,
 	pfree(objdesc);
 }
 
-#ifdef NEIL
+#ifdef YB_TODO
+/* YB_TODO(neil) Check if this function is still needed */
 static bool
 isSharedObjectPinned(Oid classId, Oid objectId, Relation sdepRel)
 {
-<<<<<<< pg_shdepend.c
+	/*
+	if (YBIsPinnedObjectsCacheAvailable())
+		return YBIsSharedObjectPinned(classId, objectId);
+	*/
 	if (IsYugaByteEnabled() && !YBCIsInitDbModeEnvVarSet())
 		return YbIsObjectPinned(classId, objectId,
 								true /* shared_dependency */);
@@ -1415,13 +1408,7 @@ isSharedObjectPinned(Oid classId, Oid objectId, Relation sdepRel)
 
 	return result;
 }
-=======
-	if (YBIsPinnedObjectsCacheAvailable())
-		return YBIsSharedObjectPinned(classId, objectId);
-.............
-}
 #endif
->>>>>>> pg_shdepend.c
 
 /*
  * shdepDropOwned
@@ -1776,8 +1763,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
 		systable_endscan(scan);
 	}
 
-<<<<<<< pg_shdepend.c
-	heap_close(sdepRel, RowExclusiveLock);
+	table_close(sdepRel, RowExclusiveLock);
 }
 
 /*
@@ -1849,7 +1835,3 @@ ybDropDependencyOnProfile(Oid roleId)
 
 	heap_close(sdepRel, RowExclusiveLock);
 }
-=======
-	table_close(sdepRel, RowExclusiveLock);
-}
->>>>>>> pg_shdepend.c

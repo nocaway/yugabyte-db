@@ -286,14 +286,10 @@ YbRecordPinDependency(const ObjectAddress *referenced, bool shared_insert)
 
 	CatalogCloseIndexes(indstate);
 
-<<<<<<< pg_depend.c
-	heap_close(dependDesc, RowExclusiveLock);
+	table_close(dependDesc, RowExclusiveLock);
 
 	YbPinObjectIfNeeded(referenced->classId, referenced->objectId,
 						false /* shared_dependency */);
-=======
-	table_close(dependDesc, RowExclusiveLock);
->>>>>>> pg_depend.c
 }
 
 /*
@@ -607,8 +603,9 @@ changeDependencyFor(Oid classId, Oid objectId,
 	return count;
 }
 
+#ifdef YB_TODO
+/* YB_TODO(neil) double check this code. This function has been redefined. */
 /*
-<<<<<<< pg_depend.c
  * isObjectPinned()
  *
  * Test if an object is required for basic database functionality.
@@ -625,7 +622,11 @@ isObjectPinned(const ObjectAddress *object, Relation rel)
 								false /* shared_dependency */);
 
 	bool		ret = false;
-=======
+	......
+}
+#endif
+
+/*
  * Adjust all dependency records to come from a different object of the same type
  *
  * classId/oldObjectId specify the old referencing object.
@@ -640,7 +641,6 @@ changeDependenciesOf(Oid classId, Oid oldObjectId,
 	long		count = 0;
 	Relation	depRel;
 	ScanKeyData key[2];
->>>>>>> pg_depend.c
 	SysScanDesc scan;
 	HeapTuple	tup;
 

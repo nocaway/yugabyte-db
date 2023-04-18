@@ -90,15 +90,11 @@
 #include "utils/memutils.h"
 #include "utils/regproc.h"
 #include "utils/syscache.h"
-<<<<<<< objectaddress.c
-#include "utils/tqual.h"
 
 #include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "commands/yb_profile.h"
-=======
->>>>>>> objectaddress.c
 
 /*
  * ObjectProperty
@@ -628,21 +624,6 @@ static const ObjectPropertyType ObjectProperty[] =
 		InvalidAttrNumber,		/* no ACL (same as relation) */
 		OBJECT_STATISTIC_EXT,
 		true
-<<<<<<< objectaddress.c
-	},
-	{
-		YbProfileRelationId,
-		YbProfileOidIndexId,
-		-1,
-		-1,
-		Anum_pg_yb_profile_prfname,
-		InvalidAttrNumber,
-		InvalidAttrNumber,
-		InvalidAttrNumber,
-		OBJECT_YBPROFILE,
-		true
-	}
-=======
 	},
 	{
 		"user mapping",
@@ -658,7 +639,19 @@ static const ObjectPropertyType ObjectProperty[] =
 		OBJECT_USER_MAPPING,
 		false
 	},
->>>>>>> objectaddress.c
+	{
+		/* YB_TODO(neil) Need name for the new entry */
+		YbProfileRelationId,
+		YbProfileOidIndexId,
+		-1,
+		-1,
+		Anum_pg_yb_profile_prfname,
+		InvalidAttrNumber,
+		InvalidAttrNumber,
+		InvalidAttrNumber,
+		OBJECT_YBPROFILE,
+		true
+	},
 };
 
 /*
@@ -1072,14 +1065,9 @@ get_object_address(ObjectType objtype, Node *object,
 			case OBJECT_PUBLICATION:
 			case OBJECT_SUBSCRIPTION:
 			case OBJECT_YBTABLEGROUP:
-<<<<<<< objectaddress.c
 			case OBJECT_YBPROFILE:
 				address = get_object_address_unqualified(objtype,
-														 (Value *) object, missing_ok);
-=======
-				address = get_object_address_unqualified(objtype,
 														 castNode(String, object), missing_ok);
->>>>>>> objectaddress.c
 				break;
 			case OBJECT_TYPE:
 			case OBJECT_DOMAIN:
@@ -2699,8 +2687,8 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 			break;
 		case OBJECT_STATISTIC_EXT:
 			if (!pg_statistics_object_ownercheck(address.objectId, roleid))
-<<<<<<< objectaddress.c
-				aclcheck_error_type(ACLCHECK_NOT_OWNER, address.objectId);
+				aclcheck_error(ACLCHECK_NOT_OWNER, objtype,
+							   NameListToString(castNode(List, object)));
 			break;
 		case OBJECT_YBPROFILE:
 			/* A profile can be dropped by the super user or yb_db_admin */
@@ -2711,12 +2699,6 @@ check_object_ownership(Oid roleid, ObjectType objtype, ObjectAddress address,
 						 errhint("Must be superuser or a member of the"
 								 " yb_db_admin role to drop a profile.")));
 			break;
-
-=======
-				aclcheck_error(ACLCHECK_NOT_OWNER, objtype,
-							   NameListToString(castNode(List, object)));
-			break;
->>>>>>> objectaddress.c
 		default:
 			elog(ERROR, "unrecognized object type: %d",
 				 (int) objtype);

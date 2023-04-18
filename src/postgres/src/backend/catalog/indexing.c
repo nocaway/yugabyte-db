@@ -451,16 +451,6 @@ CatalogTupleInsertWithInfo(Relation heapRel, HeapTuple tup,
 			}
 			YB_FOR_EACH_DB_END;
 		}
-<<<<<<< indexing.c
-		oid = YBCExecuteInsertForDb(YBCGetDatabaseOid(heapRel),
-									heapRel,
-									RelationGetDescr(heapRel),
-									tup,
-									ONCONFLICT_NONE,
-									&ybctid);
-		/* Update the local cache automatically */
-		YbSetSysCacheTuple(heapRel, tup);
-=======
 		YBCExecuteInsertForDb(YBCGetDatabaseOid(heapRel),
 							  heapRel,
 							  RelationGetDescr(heapRel),
@@ -469,8 +459,7 @@ CatalogTupleInsertWithInfo(Relation heapRel, HeapTuple tup,
 							  &ybctid);
 
 		/* Update the local cache automatically */
-		YBSetSysCacheTuple(heapRel, tup);
->>>>>>> indexing.c
+		YbSetSysCacheTuple(heapRel, tup);
 	}
 	else
 	{
@@ -481,71 +470,6 @@ CatalogTupleInsertWithInfo(Relation heapRel, HeapTuple tup,
 }
 
 /*
-<<<<<<< indexing.c
- * CatalogTupleInsertWithInfo - as above, but with caller-supplied index info
- *
- * This should be used when it's important to amortize CatalogOpenIndexes/
- * CatalogCloseIndexes work across multiple insertions.  At some point we
- * might cache the CatalogIndexState data somewhere (perhaps in the relcache)
- * so that callers needn't trouble over this ... but we don't do so today.
- *
- * if yb_shared_insert is specified, this insert will be done in every
- * database (including template0 and template1). This is needed when
- * creating shared relations.
- * This flag should not be used during initdb bootstrap.
- */
-Oid
-CatalogTupleInsertWithInfo(Relation heapRel, HeapTuple tup,
-						   CatalogIndexState indstate, bool yb_shared_insert)
-{
-	Oid			oid;
-
-	if (IsYugaByteEnabled())
-	{
-		/* Keep ybctid consistent across all databases. */
-		Datum ybctid = 0;
-
-		if (yb_shared_insert)
-		{
-			if (!IsYsqlUpgrade)
-				elog(ERROR, "shared insert cannot be done outside of YSQL upgrade");
-
-			YB_FOR_EACH_DB(pg_db_tuple)
-			{
-				Oid dboid = HeapTupleGetOid(pg_db_tuple);
-				/*
-				 * Since this is a catalog table, we assume it exists in all databases.
-				 * YB doesn't use PG locks so it's okay not to take them.
-				 */
-				if (dboid == YBCGetDatabaseOid(heapRel))
-					continue; /* Will be done after the loop. */
-				YBCExecuteInsertForDb(dboid,
-									  heapRel,
-									  RelationGetDescr(heapRel),
-									  tup,
-									  ONCONFLICT_NONE,
-									  &ybctid);
-			}
-			YB_FOR_EACH_DB_END;
-		}
-		oid = YBCExecuteInsertForDb(YBCGetDatabaseOid(heapRel),
-									heapRel,
-									RelationGetDescr(heapRel),
-									tup,
-									ONCONFLICT_NONE,
-									&ybctid);
-		/* Update the local cache automatically */
-		YbSetSysCacheTuple(heapRel, tup);
-	}
-	else
-	{
-		oid = simple_heap_insert(heapRel, tup);
-	}
-
-	CatalogIndexInsert(indstate, tup, yb_shared_insert);
-
-	return oid;
-=======
  * CatalogTuplesMultiInsertWithInfo - as above, but for multiple tuples
  *
  * Insert multiple tuples into the given catalog relation at once, with an
@@ -579,7 +503,6 @@ CatalogTuplesMultiInsertWithInfo(Relation heapRel, TupleTableSlot **slot,
 		if (should_free)
 			heap_freetuple(tuple);
 	}
->>>>>>> indexing.c
 }
 
 /*

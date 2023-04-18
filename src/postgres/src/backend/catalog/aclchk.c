@@ -4139,14 +4139,10 @@ aclcheck_error(AclResult aclerr, ObjectType objtype,
 					case OBJECT_DEFAULT:
 					case OBJECT_DEFACL:
 					case OBJECT_DOMCONSTRAINT:
-<<<<<<< aclchk.c
-					case OBJECT_PUBLICATION_REL:
-					case OBJECT_YBPROFILE:
-=======
 					case OBJECT_PARAMETER_ACL:
 					case OBJECT_PUBLICATION_NAMESPACE:
 					case OBJECT_PUBLICATION_REL:
->>>>>>> aclchk.c
+					case OBJECT_YBPROFILE:
 					case OBJECT_ROLE:
 					case OBJECT_TRANSFORM:
 					case OBJECT_TSPARSER:
