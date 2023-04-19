@@ -781,34 +781,23 @@ YbgStatus YbgSamplerCreate(double rstate_w, uint64_t randstate, YbgReservoirStat
 	PG_SETUP_ERROR_REPORTING();
 	YbgReservoirState rstate = (YbgReservoirState) palloc0(sizeof(struct YbgReservoirStateData));
 	rstate->rs.W = rstate_w;
-<<<<<<< ybgate_api.c
-	Uint64ToSamplerRandomState(rstate->rs.randstate, randstate);
-	*yb_rs = rstate;
-	PG_STATUS_OK();
-=======
 #ifdef YB_TODO
 	/* YB_TODO(neil) Random state is no longer an array */
 	Uint64ToSamplerRandomState(rstate->rs.randstate, randstate);
 #endif
 	*yb_rs = rstate;
-	return PG_STATUS_OK;
->>>>>>> ybgate_api.c
+	PG_STATUS_OK();
 }
 
 YbgStatus YbgSamplerGetState(YbgReservoirState yb_rs, double *rstate_w, uint64_t *randstate)
 {
 	PG_SETUP_ERROR_REPORTING();
 	*rstate_w = yb_rs->rs.W;
-<<<<<<< ybgate_api.c
-	*randstate = SamplerRandomStateToUint64(yb_rs->rs.randstate);
-	PG_STATUS_OK();
-=======
 #ifdef YB_TODO
 	/* YB_TODO(neil) Random state is no longer an array */
 	*randstate = SamplerRandomStateToUint64(yb_rs->rs.randstate);
 #endif
-	return PG_STATUS_OK;
->>>>>>> ybgate_api.c
+	PG_STATUS_OK();
 }
 
 YbgStatus YbgSamplerRandomFract(YbgReservoirState yb_rs, double *value)
@@ -818,12 +807,8 @@ YbgStatus YbgSamplerRandomFract(YbgReservoirState yb_rs, double *value)
 	PG_SETUP_ERROR_REPORTING();
 	ReservoirState rs = &yb_rs->rs;
 	*value = sampler_random_fract(rs->randstate);
-<<<<<<< ybgate_api.c
-	PG_STATUS_OK();
-=======
 #endif
-	return PG_STATUS_OK;
->>>>>>> ybgate_api.c
+	PG_STATUS_OK();
 }
 
 YbgStatus YbgReservoirGetNextS(YbgReservoirState yb_rs, double t, int n, double *s)
