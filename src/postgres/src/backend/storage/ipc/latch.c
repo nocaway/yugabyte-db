@@ -434,14 +434,9 @@ OwnLatch(Latch *latch)
 	Assert(signal_fd >= 0);
 #endif
 
-<<<<<<< latch.c
-	if (latch->owner_pid != 0)
-		elog(ERROR, "latch already owned by %d", latch->owner_pid);
-=======
 	owner_pid = latch->owner_pid;
 	if (owner_pid != 0)
 		elog(PANIC, "latch already owned by PID %d", owner_pid);
->>>>>>> latch.c
 
 	latch->owner_pid = MyProcPid;
 }

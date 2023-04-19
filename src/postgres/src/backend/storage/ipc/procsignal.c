@@ -21,14 +21,6 @@
 #include "port/pg_bitutils.h"
 #include "commands/async.h"
 #include "miscadmin.h"
-<<<<<<< procsignal.c
-#include "replication/walsender.h"
-#include "storage/latch.h"
-#include "storage/ipc.h"
-#include "storage/proc.h"
-#include "storage/procsignal.h"
-#include "storage/shmem.h"
-=======
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "storage/condition_variable.h"
@@ -37,10 +29,12 @@
 #include "storage/proc.h"
 #include "storage/shmem.h"
 #include "storage/smgr.h"
->>>>>>> procsignal.c
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
 #include "utils/memutils.h"
+
+/* Yugabyte includes */
+#include "storage/procsignal.h"
 
 /*
  * The SIGUSR1 signal is multiplexed to support signaling multiple event
@@ -109,11 +103,12 @@ static ProcSignalHeader *ProcSignal = NULL;
 static ProcSignalSlot *MyProcSignalSlot = NULL;
 
 static bool CheckProcSignal(ProcSignalReason reason);
-<<<<<<< procsignal.c
-=======
-static void CleanupProcSignalState(int status, Datum arg);
 static void ResetProcSignalBarrierBits(uint32 flags);
->>>>>>> procsignal.c
+
+#ifdef YB_TODO
+/* YB_TODO(neil) Yb makes this public */
+static void CleanupProcSignalState(int status, Datum arg);
+#endif
 
 /*
  * ProcSignalShmemSize
@@ -257,27 +252,6 @@ CleanupProcSignalState(int status, Datum arg)
 	 */
 	MyProcSignalSlot = NULL;
 
-<<<<<<< procsignal.c
-	CleanupProcSignalStateInternal(MyProc, pss_idx, slot);
-}
-
-/*
- * CleanupProcSignalStateForProc
- *		Remove the given process from ProcSignalSlots
- *
- * This function is called from reaper() when the parent is notified that its
- * child died unexpectedly.
- */
-void
-CleanupProcSignalStateForProc(PGPROC *proc)
-{
-	int			pss_idx = proc->backendId;
-	volatile ProcSignalSlot *slot;
-
-	slot = &ProcSignalSlots[pss_idx - 1];
-
-	CleanupProcSignalStateInternal(proc, proc->backendId, slot);
-=======
 	/* sanity check */
 	if (slot->pss_pid != MyProcPid)
 	{
@@ -298,7 +272,29 @@ CleanupProcSignalStateForProc(PGPROC *proc)
 	ConditionVariableBroadcast(&slot->pss_barrierCV);
 
 	slot->pss_pid = 0;
->>>>>>> procsignal.c
+}
+
+
+/* YB_TODO(neil)
+ * - Fixed CleanupProcSignalStateForProc().
+ * - Delete CleanupProcSignalStateInternal(). It's no longer correct.
+ */
+/*
+ * CleanupProcSignalStateForProc
+ *		Remove the given process from ProcSignalSlots
+ *
+ * This function is called from reaper() when the parent is notified that its
+ * child died unexpectedly.
+ */
+void
+CleanupProcSignalStateForProc(PGPROC *proc)
+{
+	int			pss_idx = proc->backendId;
+	volatile ProcSignalSlot *slot;
+
+	slot = &ProcSignalSlots[pss_idx - 1];
+
+	CleanupProcSignalStateInternal(proc, proc->backendId, slot);
 }
 
 /*
