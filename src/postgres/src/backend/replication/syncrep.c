@@ -379,30 +379,20 @@ SyncRepCancelWait(void)
 }
 
 void
-<<<<<<< syncrep.c
-SyncRepCleanupAtProcExit(PGPROC *proc)
-{
-	if (!SHMQueueIsDetached(&(proc->syncRepLinks)))
-=======
-SyncRepCleanupAtProcExit(void)
+SyncRepCleanupAtProcExit(PGPROC *yb_proc)
 {
 	/*
 	 * First check if we are removed from the queue without the lock to not
 	 * slow down backend exit.
 	 */
-	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
->>>>>>> syncrep.c
+	if (!SHMQueueIsDetached(&(yb_proc->syncRepLinks)))
 	{
 		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-<<<<<<< syncrep.c
-		SHMQueueDelete(&(proc->syncRepLinks));
-=======
 
 		/* maybe we have just been removed, so recheck */
-		if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
-			SHMQueueDelete(&(MyProc->syncRepLinks));
+		if (!SHMQueueIsDetached(&(yb_proc->syncRepLinks)))
+			SHMQueueDelete(&(yb_proc->syncRepLinks));
 
->>>>>>> syncrep.c
 		LWLockRelease(SyncRepLock);
 	}
 }
