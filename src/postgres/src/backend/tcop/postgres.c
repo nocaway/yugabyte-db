@@ -2420,22 +2420,13 @@ check_log_duration(char *msec_str, bool was_logged)
 
 		/*
 		 * Do not log if log_statement_sample_rate = 0. Log a sample if
-<<<<<<< postgres.c
-		 * log_statement_sample_rate <= 1 and avoid unecessary random() call
-		 * if log_statement_sample_rate = 1.
-=======
 		 * log_statement_sample_rate <= 1 and avoid unnecessary PRNG call if
 		 * log_statement_sample_rate = 1.
->>>>>>> postgres.c
 		 */
 		if (exceeded_sample_duration)
 			in_sample = log_statement_sample_rate != 0 &&
 				(log_statement_sample_rate == 1 ||
-<<<<<<< postgres.c
-				 random() <= log_statement_sample_rate * MAX_RANDOM_VALUE);
-=======
 				 pg_prng_double(&pg_global_prng_state) <= log_statement_sample_rate);
->>>>>>> postgres.c
 
 		if (exceeded_duration || in_sample || log_duration || xact_is_sampled)
 		{
@@ -2920,23 +2911,6 @@ quickdie(SIGNAL_ARGS)
 	 * wrong, so there's not much to lose.  Assuming the postmaster is still
 	 * running, it will SIGKILL us soon if we get stuck for some reason.
 	 *
-<<<<<<< postgres.c
-	 * Ideally this should be ereport(FATAL), but then we'd not get control
-	 * back...
-	 */
-
-#ifndef THREAD_SANITIZER
-	ereport(WARNING,
-			(errcode(ERRCODE_CRASH_SHUTDOWN),
-			 errmsg("terminating connection because of crash of another server process"),
-			 errdetail("The postmaster has commanded this server process to roll back"
-					   " the current transaction and exit, because another"
-					   " server process exited abnormally and possibly corrupted"
-					   " shared memory."),
-			 errhint("In a moment you should be able to reconnect to the"
-					 " database and repeat your command.")));
-#endif
-=======
 	 * One thing we can do to make this a tad safer is to clear the error
 	 * context stack, so that context callbacks are not called.  That's a lot
 	 * less code that could be reached here, and the context info is unlikely
@@ -2961,6 +2935,8 @@ quickdie(SIGNAL_ARGS)
 					 errmsg("terminating connection because of unexpected SIGQUIT signal")));
 			break;
 		case PMQUIT_FOR_CRASH:
+			/* YB_TODO(Deepthi) Commit c5f22319c2b77de0f2ebeeb797791d925dfd070d */
+#ifndef THREAD_SANITIZER
 			/* A crash-and-restart cycle is in progress */
 			ereport(WARNING_CLIENT_ONLY,
 					(errcode(ERRCODE_CRASH_SHUTDOWN),
@@ -2971,6 +2947,7 @@ quickdie(SIGNAL_ARGS)
 							   " shared memory."),
 					 errhint("In a moment you should be able to reconnect to the"
 							 " database and repeat your command.")));
+#endif
 			break;
 		case PMQUIT_FOR_STOP:
 			/* Immediate-mode stop */
@@ -2979,11 +2956,6 @@ quickdie(SIGNAL_ARGS)
 					 errmsg("terminating connection due to immediate shutdown command")));
 			break;
 	}
-
-	if (IsYugaByteEnabled()) {
-		YBOnPostgresBackendShutdown();
-	}
->>>>>>> postgres.c
 
 	/*
 	 * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
@@ -3018,17 +2990,11 @@ die(SIGNAL_ARGS)
 		ProcDiePending = true;
 	}
 
-<<<<<<< postgres.c
 	if (IsYugaByteEnabled())
 		YBCInterruptPgGate();
-=======
-	if (IsYugaByteEnabled()) {
-		YBCInterruptPgGate();
-	}
 
 	/* for the cumulative stats system */
 	pgStatSessionEndCause = DISCONNECT_KILLED;
->>>>>>> postgres.c
 
 	/* If we're still here, waken anything waiting on the process latch */
 	SetLatch(MyLatch);
@@ -3542,27 +3508,27 @@ set_stack_base(void)
 	old = stack_base_ptr;
 #endif
 
-<<<<<<< postgres.c
-	/* Set up reference point for stack depth checking */
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdangling-pointer"
-#endif
-	stack_base_ptr = &stack_base;
-#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
-#pragma GCC diagnostic pop
-=======
 	/*
 	 * Set up reference point for stack depth checking.  On recent gcc we use
 	 * __builtin_frame_address() to avoid a warning about storing a local
 	 * variable's address in a long-lived variable.
 	 */
+/* YB_TODO(mikhail) Commit fda466915e304491214789d9b08f36c19e7fd775 */
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+#endif
+
 #ifdef HAVE__BUILTIN_FRAME_ADDRESS
 	stack_base_ptr = __builtin_frame_address(0);
 #else
 	stack_base_ptr = &stack_base;
->>>>>>> postgres.c
 #endif
+
+#if !defined(__clang__) && defined(__GNUC__) && __GNUC__ >= 12
+#pragma GCC diagnostic pop
+#endif
+
 #if defined(__ia64__) || defined(__ia64)
 	register_stack_base_ptr = ia64_get_bsp();
 #endif
@@ -5579,11 +5545,6 @@ PostgresMain(const char *dbname, const char *username)
 				set_ps_display("idle");
 				pgstat_report_activity(STATE_IDLE, NULL);
 
-<<<<<<< postgres.c
-				if (IsYugaByteEnabled())
-					yb_pgstat_set_has_catalog_version(false);
-			}
-=======
 				/* Start the idle-session timer */
 				if (IdleSessionTimeout > 0)
 				{
@@ -5591,11 +5552,13 @@ PostgresMain(const char *dbname, const char *username)
 					enable_timeout_after(IDLE_SESSION_TIMEOUT,
 										 IdleSessionTimeout);
 				}
+
+				if (IsYugaByteEnabled())
+					yb_pgstat_set_has_catalog_version(false);
 			}
 
 			/* Report any recently-changed GUC options */
 			ReportChangedGUCOptions();
->>>>>>> postgres.c
 
 			ReadyForQuery(whereToSendOutput);
 			send_ready_for_query = false;
