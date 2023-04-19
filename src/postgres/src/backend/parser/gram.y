@@ -733,32 +733,19 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
  */
 
 /* ordinary key words in alphabetical order */
-<<<<<<< gram.y
 %token <keyword> ABORT_P ABSOLUTE_P ACCESS ACCOUNT ACTION ADD_P ADMIN AFTER
 	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
-	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
-=======
-%token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
-	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
 	ASENSITIVE ASSERTION ASSIGNMENT ASYMMETRIC ATOMIC AT ATTACH ATTRIBUTE AUTHORIZATION
->>>>>>> gram.y
 
 	BACKFILL BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
 	BOOLEAN_P BOTH BREADTH BY
 
 	CACHE CALL CALLED CASCADE CASCADED CASE CAST CATALOG_P CHAIN CHAR_P
 	CHARACTER CHARACTERISTICS CHECK CHECKPOINT CLASS CLOSE
-<<<<<<< gram.y
 	CLUSTER COALESCE COLLATE COLLATION COLOCATED COLOCATION COLUMN COLUMNS COMMENT COMMENTS COMMIT
-	COMMITTED CONCURRENTLY CONFIGURATION CONFLICT CONNECTION CONSTRAINT
-	CONSTRAINTS CONTENT_P CONTINUE_P CONVERSION_P COPY COST CREATE
-	CROSS CSV CUBE CURRENT_P
-=======
-	CLUSTER COALESCE COLLATE COLLATION COLOCATED COLUMN COLUMNS COMMENT COMMENTS COMMIT
 	COMMITTED COMPRESSION CONCURRENTLY CONFIGURATION CONFLICT
 	CONNECTION CONSTRAINT CONSTRAINTS CONTENT_P CONTINUE_P CONVERSION_P COPY
 	COST CREATE CROSS CSV CUBE CURRENT_P
->>>>>>> gram.y
 	CURRENT_CATALOG CURRENT_DATE CURRENT_ROLE CURRENT_SCHEMA
 	CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER CURSOR CYCLE
 
@@ -771,13 +758,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXPRESSION
 	EXTENSION EXTERNAL EXTRACT
 
-<<<<<<< gram.y
-	FAILED_LOGIN_ATTEMPTS FALSE_P FAMILY FETCH FILTER FIRST_P FLOAT_P FOLLOWING
-	FOR FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
-=======
-	FALSE_P FAMILY FETCH FILTER FINALIZE FIRST_P FLOAT_P FOLLOWING FOR
+	FAILED_LOGIN_ATTEMPTS FALSE_P FAMILY FETCH FILTER FINALIZE FIRST_P FLOAT_P FOLLOWING FOR
 	FORCE FOREIGN FORWARD FREEZE FROM FULL FUNCTION FUNCTIONS
->>>>>>> gram.y
 
 	GENERATED GLOBAL GRANT GRANTED GREATEST GROUP_P GROUPING GROUPS
 
@@ -795,37 +777,23 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	LABEL LANGUAGE LARGE_P LAST_P LATERAL_P
 	LEADING LEAKPROOF LEAST LEFT LEVEL LIKE LIMIT LISTEN LOAD LOCAL
 	LOCALTIME LOCALTIMESTAMP LOCATION LOCK_P LOCKED LOGGED
-<<<<<<< gram.y
-
-	MAPPING MATCH MATERIALIZED MAXVALUE METHOD MINUTE_P MINVALUE MODE MONTH_P MOVE
-
-	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NONCONCURRENTLY NONE
-	NOPROFILE NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
-=======
 	MAPPING MATCH MATCHED MATERIALIZED MAXVALUE MERGE METHOD
 	MINUTE_P MINVALUE MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NFC NFD NFKC NFKD NO NONCONCURRENTLY NONE
 
 	NORMALIZE NORMALIZED
-	NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
->>>>>>> gram.y
+	NOPROFILE NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF
 	NULLS_P NUMERIC
 
 	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OPTIONS OR
 	ORDER ORDINALITY OTHERS OUT_P OUTER_P
 	OVER OVERLAPS OVERLAY OVERRIDING OWNED OWNER
 
-<<<<<<< gram.y
-	PARALLEL PARSER PARTIAL PARTITION PASSING PASSWORD PLACING PLANS POLICY
-	POSITION PRECEDING PRECISION PRESERVE PREPARE PREPARED PRIMARY
-	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROFILE PROGRAM PUBLICATION
-=======
 	PARALLEL PARAMETER PARSER PARTIAL PARTITION PASSING PASSWORD
 	PLACING PLANS POLICY
 	POSITION PRECEDING PRECISION PRESERVE PREPARE PREPARED PRIMARY
-	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROGRAM PUBLICATION
->>>>>>> gram.y
+	PRIOR PRIVILEGES PROCEDURAL PROCEDURE PROCEDURES PROFILE PROGRAM PUBLICATION
 
 	QUOTE
 
@@ -847,13 +815,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	TREAT TRIGGER TRIM TRUE_P
 	TRUNCATE TRUSTED TYPE_P TYPES_P
 
-<<<<<<< gram.y
-	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNLOCK
-	UNLOGGED UNTIL UPDATE USER USING
-=======
 	UESCAPE UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN
-	UNLISTEN UNLOGGED UNTIL UPDATE USER USING
->>>>>>> gram.y
+	UNLISTEN UNLOCK UNLOGGED UNTIL UPDATE USER USING
 
 	VACUUM VALID VALIDATE VALIDATOR VALUE_P VALUES VARCHAR VARIADIC VARYING
 	VERBOSE VERSION_P VIEW VIEWS VOLATILE
@@ -1302,8 +1265,7 @@ AlterOptRoleElem:
 		/*	Supported but not documented for roles, for use by ALTER GROUP. */
 			| USER role_list
 				{
-<<<<<<< gram.y
-					$$ = makeDefElem("rolemembers", (Node *)$2, @1);
+					$$ = makeDefElem("rolemembers", (Node *) $2, @1);
 				}
 			| PROFILE name
 				{
@@ -1329,10 +1291,6 @@ AlterOptRoleElem:
 						parser_ybc_not_support(@1, "PROFILE");
 					$$ = makeDefElem("unlocked", (Node *)makeInteger(true), @1);
 				}
-=======
-					$$ = makeDefElem("rolemembers", (Node *) $2, @1);
-				}
->>>>>>> gram.y
 			| IDENT
 				{
 					/*
@@ -1341,35 +1299,6 @@ AlterOptRoleElem:
 					 * size of the main parser.
 					 */
 					if (strcmp($1, "superuser") == 0)
-<<<<<<< gram.y
-						$$ = makeDefElem("superuser", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "nosuperuser") == 0)
-						$$ = makeDefElem("superuser", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "createrole") == 0)
-						$$ = makeDefElem("createrole", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "nocreaterole") == 0)
-						$$ = makeDefElem("createrole", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "replication") == 0)
-						$$ = makeDefElem("isreplication", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "noreplication") == 0)
-						$$ = makeDefElem("isreplication", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "createdb") == 0)
-						$$ = makeDefElem("createdb", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "nocreatedb") == 0)
-						$$ = makeDefElem("createdb", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "login") == 0)
-						$$ = makeDefElem("canlogin", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "nologin") == 0)
-						$$ = makeDefElem("canlogin", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "lock") == 0)
-						$$ = makeDefElem("islocked", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "open") == 0)
-						$$ = makeDefElem("islocked", (Node *)makeInteger(false), @1);
-					else if (strcmp($1, "bypassrls") == 0)
-						$$ = makeDefElem("bypassrls", (Node *)makeInteger(true), @1);
-					else if (strcmp($1, "nobypassrls") == 0)
-						$$ = makeDefElem("bypassrls", (Node *)makeInteger(false), @1);
-=======
 						$$ = makeDefElem("superuser", (Node *) makeBoolean(true), @1);
 					else if (strcmp($1, "nosuperuser") == 0)
 						$$ = makeDefElem("superuser", (Node *) makeBoolean(false), @1);
@@ -1393,7 +1322,6 @@ AlterOptRoleElem:
 						$$ = makeDefElem("bypassrls", (Node *) makeBoolean(true), @1);
 					else if (strcmp($1, "nobypassrls") == 0)
 						$$ = makeDefElem("bypassrls", (Node *) makeBoolean(false), @1);
->>>>>>> gram.y
 					else if (strcmp($1, "noinherit") == 0)
 					{
 						/*
@@ -1402,6 +1330,10 @@ AlterOptRoleElem:
 						 */
 						$$ = makeDefElem("inherit", (Node *) makeBoolean(false), @1);
 					}
+					else if (strcmp($1, "lock") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(true), @1);
+					else if (strcmp($1, "open") == 0)
+						$$ = makeDefElem("islocked", (Node *)makeInteger(false), @1);
 					else
 						ereport(ERROR,
 								(errcode(ERRCODE_SYNTAX_ERROR),
@@ -3888,15 +3820,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					if ($13 && $14)
 					{
 						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-<<<<<<< gram.y
-										errmsg("cannot use TABLEGROUP with SPLIT")));
-					}
-					$$ = (Node *)n;
-				}
-		| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name '('
-			OptTableElementList ')' OptInherit OptPartitionSpec OptWith
-			OnCommitOption OptTableSpace OptSplit OptTableGroup
-=======
 										errmsg("Cannot use TABLEGROUP with SPLIT.")));
 					}
 					$$ = (Node *) n;
@@ -3905,7 +3828,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 			OptTypedTableElementList OptPartitionSpec table_access_method_clause
 			OptWith OnCommitOption OptTableSpace
 			OptSplit OptTableGroup
->>>>>>> gram.y
 				{
 					CreateStmt *n = makeNode(CreateStmt);
 
@@ -3943,97 +3865,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 					if ($16 && $17)
 					{
 						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-<<<<<<< gram.y
-										errmsg("cannot use TABLEGROUP with SPLIT")));
-					}
-					$$ = (Node *)n;
-				}
-		| CREATE OptTemp TABLE qualified_name OF any_name
-			OptTypedTableElementList OptPartitionSpec OptWith OnCommitOption
-			OptTableSpace OptSplit OptTableGroup
-				{
-					CreateStmt *n = makeNode(CreateStmt);
-					$4->relpersistence = $2;
-					n->relation = $4;
-					n->tableElts = $7;
-					n->inhRelations = NIL;
-					n->partspec = $8;
-					n->ofTypename = makeTypeNameFromNameList($6);
-					n->ofTypename->location = @6;
-					n->constraints = NIL;
-					n->options = $9;
-					n->oncommit = $10;
-					n->tablespacename = $11;
-					n->if_not_exists = false;
-					n->split_options = $12;
-					n->tablegroupname = $13;
-					if ($12 && $2 == RELPERSISTENCE_TEMP)
-					{
-						ereport(WARNING, (errmsg("Split options on TEMP table will be ignored")));
-					}
-					if ($13 && $2 == RELPERSISTENCE_TEMP)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("Cannot use TABLEGROUP with TEMP table.")));
-					}
-					if ($11 && $13)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("Cannot use TABLEGROUP with TABLESPACE."),
-										errdetail("The tablespace of the tablegroup will be used.")));
-					}
-					if ($12 && $13)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("cannot use TABLEGROUP with SPLIT")));
-					}
-					$$ = (Node *)n;
-				}
-		| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name OF any_name
-			OptTypedTableElementList OptPartitionSpec OptWith OnCommitOption
-			OptTableSpace OptSplit OptTableGroup
-				{
-					CreateStmt *n = makeNode(CreateStmt);
-					$7->relpersistence = $2;
-					n->relation = $7;
-					n->tableElts = $10;
-					n->inhRelations = NIL;
-					n->partspec = $11;
-					n->ofTypename = makeTypeNameFromNameList($9);
-					n->ofTypename->location = @9;
-					n->constraints = NIL;
-					n->options = $12;
-					n->oncommit = $13;
-					n->tablespacename = $14;
-					n->if_not_exists = true;
-					n->split_options = $15;
-					n->tablegroupname = $16;
-					if ($15 && $2 == RELPERSISTENCE_TEMP)
-					{
-						ereport(WARNING, (errmsg("Split options on TEMP table will be ignored")));
-					}
-					if ($16 && $2 == RELPERSISTENCE_TEMP)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("Cannot use TABLEGROUP with TEMP table.")));
-					}
-					if ($14 && $16)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("Cannot use TABLEGROUP with TABLESPACE."),
-										errdetail("The tablespace of the tablegroup will be used.")));
-					}
-					if ($15 && $16)
-					{
-						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-										errmsg("cannot use TABLEGROUP with SPLIT")));
-					}
-					$$ = (Node *)n;
-				}
-		| CREATE OptTemp TABLE qualified_name PARTITION OF qualified_name
-			OptTypedTableElementList PartitionBoundSpec OptPartitionSpec OptWith
-			OnCommitOption OptTableSpace OptSplit
-=======
 										errmsg("Cannot use TABLEGROUP with SPLIT.")));
 					}
 					$$ = (Node *) n;
@@ -4042,7 +3873,6 @@ CreateStmt:	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')'
 			OptTypedTableElementList PartitionBoundSpec OptPartitionSpec
 			table_access_method_clause OptWith OnCommitOption OptTableSpace
 			OptSplit
->>>>>>> gram.y
 				{
 					CreateStmt *n = makeNode(CreateStmt);
 
@@ -4487,13 +4317,8 @@ ConstraintAttr:
 TableLikeClause:
 			LIKE qualified_name TableLikeOptionList
 				{
-<<<<<<< gram.y
-					TableLikeClause *n = makeNode(TableLikeClause);
-=======
-					parser_ybc_signal_unsupported(@1, "LIKE clause", 1129);
 					TableLikeClause *n = makeNode(TableLikeClause);
 
->>>>>>> gram.y
 					n->relation = $2;
 					n->options = $3;
 					n->relationOid = InvalidOid;
@@ -4508,63 +4333,25 @@ TableLikeOptionList:
 		;
 
 TableLikeOption:
-<<<<<<< gram.y
-				COMMENTS			{ $$ = CREATE_TABLE_LIKE_COMMENTS; }
-				| CONSTRAINTS		{ $$ = CREATE_TABLE_LIKE_CONSTRAINTS; }
-				| DEFAULTS			{ $$ = CREATE_TABLE_LIKE_DEFAULTS; }
-				| IDENTITY_P		{ $$ = CREATE_TABLE_LIKE_IDENTITY; }
-				| INDEXES			{ $$ = CREATE_TABLE_LIKE_INDEXES; }
-				| STATISTICS		{ $$ = CREATE_TABLE_LIKE_STATISTICS; }
-				| STORAGE			{ $$ = CREATE_TABLE_LIKE_STORAGE; }
-				| ALL				{ $$ = CREATE_TABLE_LIKE_ALL; }
-		;
-=======
-			COMMENTS
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE COMMENTS", 1129);
-					$$ = CREATE_TABLE_LIKE_COMMENTS;
-				}
+			COMMENTS			{ $$ = CREATE_TABLE_LIKE_COMMENTS; }
 			| COMPRESSION
 				{
 					parser_ybc_signal_unsupported(@1, "LIKE COMPRESSION", 1129);
 					$$ = CREATE_TABLE_LIKE_COMPRESSION;
 				}
-			| CONSTRAINTS
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE CONSTRAINTS", 1129);
-					$$ = CREATE_TABLE_LIKE_CONSTRAINTS;
-				}
-			| DEFAULTS
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE DEFAULTS", 1129);
-					$$ = CREATE_TABLE_LIKE_DEFAULTS;
-				}
+			| CONSTRAINTS		{ $$ = CREATE_TABLE_LIKE_CONSTRAINTS; }
+			| DEFAULTS			{ $$ = CREATE_TABLE_LIKE_DEFAULTS; }
 			| GENERATED
 				{
 					parser_ybc_signal_unsupported(@1, "LIKE GENERATED", 1129);
 					$$ = CREATE_TABLE_LIKE_GENERATED;
 				}
-			| IDENTITY_P
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE IDENTITY", 1129);
-					$$ = CREATE_TABLE_LIKE_IDENTITY;
-				}
-			| INDEXES
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE INDEXES", 1129);
-					$$ = CREATE_TABLE_LIKE_INDEXES;
-				}
-			| STATISTICS
-				{
-					parser_ybc_signal_unsupported(@1, "LIKE STATISTICS", 1129);
-					$$ = CREATE_TABLE_LIKE_STATISTICS;
-				}
-			| STORAGE
-				{ parser_ybc_signal_unsupported(@1, "LIKE STORAGE", 1129); $$ = CREATE_TABLE_LIKE_STORAGE; }
-			| ALL { parser_ybc_signal_unsupported(@1, "LIKE ALL", 1129); $$ = CREATE_TABLE_LIKE_ALL; }
+			| IDENTITY_P		{ $$ = CREATE_TABLE_LIKE_IDENTITY; }
+			| INDEXES			{ $$ = CREATE_TABLE_LIKE_INDEXES; }
+			| STATISTICS		{ $$ = CREATE_TABLE_LIKE_STATISTICS; }
+			| STORAGE			{ $$ = CREATE_TABLE_LIKE_STORAGE; }
+			| ALL				{ $$ = CREATE_TABLE_LIKE_ALL; }
 		;
-
->>>>>>> gram.y
 
 /* ConstraintElem specifies constraint syntax which is not embedded into
  *	a column definition. ColConstraintElem specifies the embedded form.
@@ -5573,22 +5360,6 @@ opt_procedural:
  *
  *****************************************************************************/
 
-<<<<<<< gram.y
-CreateTableGroupStmt: CREATE TABLEGROUP name OptTableGroupOwner opt_reloptions OptTableSpace
-				{
-					parser_ybc_not_support_in_templates(@1, "Tablegroup");
-					parser_ybc_beta_feature(@1, "tablegroup", true);
-
-					CreateTableGroupStmt *n = makeNode(CreateTableGroupStmt);
-					n->tablegroupname = $3;
-					n->owner = $4;
-					n->options = $5;
-					n->tablespacename = $6;
-					n->implicit = false;
-					$$ = (Node *) n;
-				}
-		;
-=======
 CreateTableGroupStmt:
  		CREATE TABLEGROUP name OptTableGroupOwner opt_reloptions OptTableSpace
  				{
@@ -5600,10 +5371,10 @@ CreateTableGroupStmt:
  					n->owner = $4;
  					n->options = $5;
 					n->tablespacename = $6;
+					n->implicit = false;
  					$$ = (Node *) n;
  				}
  		;
->>>>>>> gram.y
 
 OptTableGroupOwner: OWNER RoleSpec		{ $$ = $2; }
 			| /*EMPTY */				{ $$ = NULL; }
@@ -5661,7 +5432,7 @@ DropTableSpaceStmt: DROP TABLESPACE name
 				|  DROP TABLESPACE IF_P EXISTS name
 				{
 					DropTableSpaceStmt *n = makeNode(DropTableSpaceStmt);
-<<<<<<< gram.y
+
 					n->tablespacename = $5;
 					n->missing_ok = true;
 					$$ = (Node *) n;
@@ -5732,10 +5503,6 @@ YbDropProfileStmt: DROP PROFILE name
 										"default"),
 								 parser_errposition(@3)));
 
-=======
-
-					n->tablespacename = $5;
->>>>>>> gram.y
 					n->missing_ok = true;
 					$$ = (Node *) n;
 				}
@@ -10207,13 +9974,8 @@ AlterTblSpcStmt:
 
 RenameStmt: ALTER AGGREGATE aggregate_with_argtypes RENAME TO name
 				{
-<<<<<<< gram.y
-					RenameStmt *n = makeNode(RenameStmt);
-=======
-					parser_ybc_signal_unsupported(@1, "ALTER AGGREGATE", 2717);
 					RenameStmt *n = makeNode(RenameStmt);
 
->>>>>>> gram.y
 					n->renameType = OBJECT_AGGREGATE;
 					n->object = (Node *) $3;
 					n->newname = $6;
@@ -10633,13 +10395,8 @@ RenameStmt: ALTER AGGREGATE aggregate_with_argtypes RENAME TO name
 				}
 			| ALTER TABLE relation_expr RENAME CONSTRAINT name TO name
 				{
-<<<<<<< gram.y
-					RenameStmt *n = makeNode(RenameStmt);
-=======
-					parser_ybc_not_support(@1, "ALTER TABLE RENAME CONSTRAINT");
 					RenameStmt *n = makeNode(RenameStmt);
 
->>>>>>> gram.y
 					n->renameType = OBJECT_TABCONSTRAINT;
 					n->relation = $3;
 					n->subname = $6;
@@ -10649,13 +10406,8 @@ RenameStmt: ALTER AGGREGATE aggregate_with_argtypes RENAME TO name
 				}
 			| ALTER TABLE IF_P EXISTS relation_expr RENAME CONSTRAINT name TO name
 				{
-<<<<<<< gram.y
-					RenameStmt *n = makeNode(RenameStmt);
-=======
-					parser_ybc_not_support(@1, "ALTER TABLE RENAME CONSTRAINT");
 					RenameStmt *n = makeNode(RenameStmt);
 
->>>>>>> gram.y
 					n->renameType = OBJECT_TABCONSTRAINT;
 					n->relation = $5;
 					n->subname = $8;
@@ -18156,17 +17908,13 @@ unreserved_keyword:
 			| NAMES
 			| NEW
 			| NEXT
-<<<<<<< gram.y
-			| NO
-			| NOPROFILE
-=======
 			| NFC
 			| NFD
 			| NFKC
 			| NFKD
 			| NO
+			| NOPROFILE
 			| NORMALIZED
->>>>>>> gram.y
 			| NOTHING
 			| NOTIFY
 			| NOWAIT
@@ -19957,7 +19705,6 @@ errhint_for_not_supported(int issue, const char *extra_hint)
 	}
 	else
 	{
-<<<<<<< gram.y
 		errhint("Please report the issue on "
 			"https://github.com/YugaByte/yugabyte-db/issues");
 	}
@@ -19986,15 +19733,6 @@ raise_feature_not_supported_signal(int pos, core_yyscan_t yyscanner,
 			 errmsg("%s", msg),
 			 errhint_for_not_supported(issue, extra_hint),
 			 parser_errposition(pos)));
-=======
-		ereport(signal_level,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("%s", msg),
-				 errhint("Please report the issue on "
-						 "https://github.com/yugabyte/yugabyte-db/issues"),
-				 parser_errposition(pos)));
-	}
->>>>>>> gram.y
 }
 
 static void

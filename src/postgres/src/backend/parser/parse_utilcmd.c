@@ -87,12 +87,8 @@ typedef struct
 	List	   *ckconstraints;	/* CHECK constraints */
 	List	   *fkconstraints;	/* FOREIGN KEY constraints */
 	List	   *ixconstraints;	/* index-creating constraints */
-<<<<<<< parse_utilcmd.c
 	List	   *yb_likepkconstraint; /* PRIMARY KEY constraints from LIKE clause */
-	List	   *inh_indexes;	/* cloned indexes from INCLUDING INDEXES */
-=======
 	List	   *likeclauses;	/* LIKE clauses that need post-processing */
->>>>>>> parse_utilcmd.c
 	List	   *extstats;		/* cloned extended statistics */
 	List	   *blist;			/* "before list" of things to do before
 								 * creating the table */
@@ -265,12 +261,8 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString)
 	cxt.ckconstraints = NIL;
 	cxt.fkconstraints = NIL;
 	cxt.ixconstraints = NIL;
-<<<<<<< parse_utilcmd.c
 	cxt.yb_likepkconstraint = NIL;
-	cxt.inh_indexes = NIL;
-=======
 	cxt.likeclauses = NIL;
->>>>>>> parse_utilcmd.c
 	cxt.extstats = NIL;
 	cxt.blist = NIL;
 	cxt.alist = NIL;
@@ -1378,102 +1370,15 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		}
 	}
 
-<<<<<<< parse_utilcmd.c
-	/* We use oids if at least one LIKE'ed table has oids. */
-	cxt->hasoids |= relation->rd_rel->relhasoids;
-
-	/*
-	 * Copy CHECK constraints if requested, being careful to adjust attribute
-	 * numbers so they match the child.
-	 */
-	if ((table_like_clause->options & CREATE_TABLE_LIKE_CONSTRAINTS) &&
-		tupleDesc->constr)
-	{
-		int			ccnum;
-
-		for (ccnum = 0; ccnum < tupleDesc->constr->num_check; ccnum++)
-		{
-			char	   *ccname = tupleDesc->constr->check[ccnum].ccname;
-			char	   *ccbin = tupleDesc->constr->check[ccnum].ccbin;
-			Constraint *n = makeNode(Constraint);
-			Node	   *ccbin_node;
-			bool		found_whole_row;
-
-			ccbin_node = map_variable_attnos(stringToNode(ccbin),
-											 1, 0,
-											 attmap, tupleDesc->natts,
-											 InvalidOid, &found_whole_row);
-
-			/*
-			 * We reject whole-row variables because the whole point of LIKE
-			 * is that the new table's rowtype might later diverge from the
-			 * parent's.  So, while translation might be possible right now,
-			 * it wouldn't be possible to guarantee it would work in future.
-			 */
-			if (found_whole_row)
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot convert whole-row table reference"),
-						 errdetail("Constraint \"%s\" contains a whole-row reference to table \"%s\".",
-								   ccname,
-								   RelationGetRelationName(relation))));
-
-			n->contype = CONSTR_CHECK;
-			n->location = -1;
-			n->conname = pstrdup(ccname);
-			n->raw_expr = NULL;
-			n->cooked_expr = nodeToString(ccbin_node);
-			cxt->ckconstraints = lappend(cxt->ckconstraints, n);
-
-			/* Copy comment on constraint */
-			if ((table_like_clause->options & CREATE_TABLE_LIKE_COMMENTS) &&
-				(comment = GetComment(get_relation_constraint_oid(RelationGetRelid(relation),
-																  n->conname, false),
-									  ConstraintRelationId,
-									  0)) != NULL)
-			{
-				CommentStmt *stmt = makeNode(CommentStmt);
-
-				stmt->objtype = OBJECT_TABCONSTRAINT;
-				stmt->object = (Node *) list_make3(makeString(cxt->relation->schemaname),
-												   makeString(cxt->relation->relname),
-												   makeString(n->conname));
-				stmt->comment = comment;
-
-				cxt->alist = lappend(cxt->alist, stmt);
-			}
-		}
-	}
-
+#ifdef YB_TODO
 	/*
 	 * Likewise, copy indexes if requested
 	 */
 	if ((table_like_clause->options & CREATE_TABLE_LIKE_INDEXES) &&
 		relation->rd_rel->relhasindex)
 	{
-		List	   *parent_indexes;
-		ListCell   *l;
-
-		parent_indexes = RelationGetIndexList(relation);
-
 		foreach(l, parent_indexes)
 		{
-			Oid			parent_index_oid = lfirst_oid(l);
-			Relation	parent_index;
-			IndexStmt  *index_stmt;
-
-			parent_index = index_open(parent_index_oid, AccessShareLock);
-
-			/* Build CREATE INDEX statement to recreate the parent_index */
-			index_stmt = generateClonedIndexStmt(cxt->relation, InvalidOid,
-												 parent_index,
-												 attmap, tupleDesc->natts, NULL);
-
-			/*
-			 * For Yugabyte clusters, the primary key index is a dummy
-			 * object. Its tablespace or location must always match that of
-			 * the table being indexed.
-			 */
 			if (IsYugaByteEnabled() && index_stmt->primary)
 			{
 				index_stmt->tableSpace = NULL;
@@ -1481,22 +1386,12 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 					index_stmt->tableSpace =
 						get_tablespace_name(cxt->tablespaceOid);
 			}
+			
+			/* ... Removed Pg Code ... */
 
-			/* Copy comment on index, if requested */
-			if (table_like_clause->options & CREATE_TABLE_LIKE_COMMENTS)
-			{
-				comment = GetComment(parent_index_oid, RelationRelationId, 0);
-
-				/*
-				 * We make use of IndexStmt's idxcomment option, so as not to
-				 * need to know now what name the index will have.
-				 */
-				index_stmt->idxcomment = comment;
-			}
-
-			/* Save it in the inh_indexes list for the time being */
-			cxt->inh_indexes = lappend(cxt->inh_indexes, index_stmt);
-
+			/* YB_TODO(neil) This code block is removed from Postgres.
+			 * Need to reinsert it back else where
+			 */
 			/*
 			 * If index is a primary key index save the primary key
 			 * constraint.
@@ -1526,10 +1421,11 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 				cxt->yb_likepkconstraint =
 					lappend(cxt->yb_likepkconstraint, primary_key);
 			}
-
 			index_close(parent_index, AccessShareLock);
 		}
-=======
+	}
+#endif
+
 	/*
 	 * We cannot yet deal with defaults, CHECK constraints, or indexes, since
 	 * we don't yet know what column numbers the copied columns will have in
@@ -1546,7 +1442,6 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 	{
 		table_like_clause->relationOid = RelationGetRelid(relation);
 		cxt->likeclauses = lappend(cxt->likeclauses, table_like_clause);
->>>>>>> parse_utilcmd.c
 	}
 
 	/*
@@ -3891,12 +3786,8 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 	cxt.ckconstraints = NIL;
 	cxt.fkconstraints = NIL;
 	cxt.ixconstraints = NIL;
-<<<<<<< parse_utilcmd.c
 	cxt.yb_likepkconstraint = NIL;
-	cxt.inh_indexes = NIL;
-=======
 	cxt.likeclauses = NIL;
->>>>>>> parse_utilcmd.c
 	cxt.extstats = NIL;
 	cxt.blist = NIL;
 	cxt.alist = NIL;
