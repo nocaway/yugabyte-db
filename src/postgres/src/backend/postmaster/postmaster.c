@@ -95,12 +95,8 @@
 
 #include "access/transam.h"
 #include "access/xlog.h"
-<<<<<<< postmaster.c
 #include "access/xact.h"
-#include "bootstrap/bootstrap.h"
-=======
 #include "access/xlogrecovery.h"
->>>>>>> postmaster.c
 #include "catalog/pg_control.h"
 #include "common/file_perm.h"
 #include "common/ip.h"
