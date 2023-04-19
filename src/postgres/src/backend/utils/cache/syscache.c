@@ -1282,7 +1282,6 @@ YbPreloadCatalogCache(int cache_id, int idx_cache_id)
 		if (idx_cache)
 			SetCatCacheTuple(idx_cache, ntp, RelationGetDescr(relation));
 
-<<<<<<< syscache.c
 		bool is_add_to_list_required = true;
 
 		switch(cache_id)
@@ -1380,7 +1379,7 @@ YbPreloadCatalogCache(int cache_id, int idx_cache_id)
 
 	systable_endscan(scandesc);
 
-	heap_close(relation, AccessShareLock);
+	table_close(relation, AccessShareLock);
 
 	if (list_of_lists)
 	{
@@ -1413,188 +1412,6 @@ YbPreloadCatalogCache(int cache_id, int idx_cache_id)
 		if (idx_cache)
 			idx_cache->yb_cc_is_fully_loaded = true;
 	}
-=======
-		/*
-		 * Special handling for the common case of looking up
-		 * functions (procedures) by name (i.e. partial key).
-		 * We set up the partial cache list for function by-name
-		 * lookup on initialization to avoid scanning the large
-		 * pg_proc table each time.
-		 */
-		if (cache_id == PROCOID)
-		{
-			ListCell *lc;
-			bool     found_match = false;
-			bool     is_null     = false;
-			ScanKeyData key      = idx_cache->cc_skey[0];
-
-			Datum ndt = heap_getattr(ntp, key.sk_attno, tupdesc, &is_null);
-
-			if (is_null)
-			{
-				YBC_LOG_WARNING("Ignoring unexpected null "
-				                "entry while initializing proc "
-				                "cache list");
-				continue;
-			}
-
-			/* Look for an existing list for functions with this name. */
-			foreach(lc, list_of_lists)
-			{
-				List      *fnlist = lfirst(lc);
-				HeapTuple otp     = (HeapTuple) linitial(fnlist);
-				Datum     odt     = heap_getattr(otp, key.sk_attno, tupdesc, &is_null);
-
-				Datum test = FunctionCall2Coll(&key.sk_func, key.sk_collation, ndt, odt);
-				found_match = DatumGetBool(test);
-				if (found_match)
-				{
-					fnlist = lappend(fnlist, ntp);
-					lfirst(lc) = fnlist;
-					break;
-				}
-			}
-
-			if (!found_match)
-			{
-				List *new_list = lappend(NIL, ntp);
-				list_of_lists = lappend(list_of_lists, new_list);
-			}
-		}
-
-		/*
-		 * Special handling for pg_rewrite: preload rules list by relation oid.
-		 * Note that rules should be ordered by name - which is achieved using
-		 * RewriteRelRulenameIndexId index.
-		 */
-		if (cache_id == RULERELNAME)
-		{
-			if (!current_list)
-			{
-				current_list = list_make1(ntp);
-			}
-			else
-			{
-				HeapTuple       ltp        = (HeapTuple) llast(current_list);
-				Form_pg_rewrite ltp_struct = (Form_pg_rewrite) GETSTRUCT(ltp);
-				Form_pg_rewrite ntp_struct = (Form_pg_rewrite) GETSTRUCT(ntp);
-				if (ntp_struct->ev_class == ltp_struct->ev_class)
-				{
-					// This rule is for the same table as the last one, continuing the list
-					current_list  = lappend(current_list, ntp);
-				}
-				else
-				{
-					// This rule is for another table, changing current list
-					list_of_lists = lappend(list_of_lists, current_list);
-					current_list  = list_make1(ntp);
-				}
-			}
-		}
-	}
-
-	if (current_list)
-	{
-		list_of_lists = lappend(list_of_lists, current_list);
-	}
-
-	systable_endscan(scandesc);
-
-	table_close(relation, AccessShareLock);
-
-	/* Load up the lists computed above - if any - into the catalog cache. */
-	ListCell *lc;
-	foreach (lc, list_of_lists)
-	{
-		List *current_list = (List *) lfirst(lc);
-		if (cache_id == PROCOID)
-		{
-			SetCatCacheList(idx_cache, 1, current_list);
-		}
-		if (cache_id == RULERELNAME)
-		{
-			SetCatCacheList(cache, 1, current_list);
-		}
-	}
-	list_free_deep(list_of_lists);
-}
-
-/*
- * In YugaByte mode load up the caches with data from some essential tables
- * that are looked up often during regular usage.
- *
- * Used during initdb.
- */
-static bool
-YBIsEssentialCache(int cache_id)
-{
-	switch (cache_id)
-	{
-		case RELOID:           switch_fallthrough();
-		case TYPEOID:          switch_fallthrough();
-		case ATTNAME:          switch_fallthrough();
-		case PROCOID:          switch_fallthrough();
-		case OPEROID:          switch_fallthrough();
-		case CASTSOURCETARGET: return true;
-		default:
-			break;
-	}
-	return false;
-}
-
-static void
-YBPreloadCatalogCacheIfEssential(int cache_id)
-{
-	if (!YBIsEssentialCache(cache_id))
-		return;
-
-	int idx_cache_id = -1;
-
-	switch (cache_id)
-	{
-		case RELOID:
-			idx_cache_id = RELNAMENSP;
-			break;
-		case TYPEOID:
-			idx_cache_id = TYPENAMENSP;
-			break;
-		case ATTNAME:
-			idx_cache_id = ATTNUM;
-			break;
-		case PROCOID:
-			idx_cache_id = PROCNAMEARGSNSP;
-			break;
-		case OPEROID:
-			idx_cache_id = OPERNAMENSP;
-			break;
-		default:
-			break;
-	}
-
-	YBPreloadCatalogCache(cache_id, idx_cache_id);
-}
-
-/*
- * Preload catalog caches with data from the master to avoid master lookups
- * later.
- *
- * Used during initdb.
- */
-void
-YBPreloadCatalogCaches(void)
-{
-	Assert(CacheInitialized);
-
-	/* Ensure individual caches are initialized */
-	InitCatalogCachePhase2();
-
-	for (int cacheId = 0; cacheId < SysCacheSize; ++cacheId)
-		if (YBIsEssentialCache(cacheId))
-			YbRegisterSysTableForPrefetching(SysCache[cacheId]->cc_reloid);
-
-	for (int cacheId = 0; cacheId < SysCacheSize; ++cacheId)
-		YBPreloadCatalogCacheIfEssential(cacheId);
->>>>>>> syscache.c
 }
 
 static void
@@ -1634,15 +1451,9 @@ YbBuildPinnedObjectCache(const char *name,
 	            depTypeAnum,
 	            BTEqualStrategyNumber, F_CHAREQ,
 	            CharGetDatum(depTypeValue));
-<<<<<<< syscache.c
-	Relation dependDesc = heap_open(dependRelId, RowExclusiveLock);
-	SysScanDesc scan = systable_beginscan(dependDesc, InvalidOid, false, NULL, 1, &key);
-	YbPinnedObjectKey pinnedKey;
-=======
 	Relation dependDesc = table_open(dependRelId, RowExclusiveLock);
 	SysScanDesc scan = systable_beginscan(dependDesc, InvalidOid, false, NULL, 1, &key);
-	YBPinnedObjectKey pinnedKey;
->>>>>>> syscache.c
+	YbPinnedObjectKey pinnedKey;
 	HeapTuple tup;
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -1655,12 +1466,6 @@ YbBuildPinnedObjectCache(const char *name,
 }
 
 static void
-<<<<<<< syscache.c
-YbLoadPinnedObjectsCache()
-{
-	YbPinnedObjectsCacheData cache = {
-		.shared = YbBuildPinnedObjectCache("Shared pinned objects cache",
-=======
 YBLoadPinnedObjectsCache()
 {
 #ifdef YB_TODO
@@ -1670,7 +1475,6 @@ YBLoadPinnedObjectsCache()
 	 */
 	YBPinnedObjectsCacheData cache = {
 		.shared = YBBuildPinnedObjectCache("Shared pinned objects cache",
->>>>>>> syscache.c
 		                                   20, /* Number of pinned objects in pg_shdepend is 9 */
 		                                   SharedDependRelationId,
 		                                   Anum_pg_shdepend_deptype,
@@ -1681,14 +1485,9 @@ YBLoadPinnedObjectsCache()
 		                                    DependRelationId,
 		                                    Anum_pg_depend_deptype,
 		                                    DEPENDENCY_PIN,
-<<<<<<< syscache.c
-		                                    YbFetchPinnedObjectKeyFromPgDepend)};
-	YbPinnedObjectsCache = cache;
-=======
 		                                    YBFetchPinnedObjectKeyFromPgDepend)};
 	YBPinnedObjectsCache = cache;
 #endif
->>>>>>> syscache.c
 }
 
 /* Build the cache in case it is not yet ready. */

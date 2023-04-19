@@ -754,10 +754,12 @@ InvalidateSystemCachesExtended(bool debug_discard, bool yb_callback)
  *		This is useful when the entire cache is being reloaded or
  *		invalidated, rather than a single cache entry.
  */
+#ifdef YB_TODO
+/* YB_TODO(neil) Pg15 refactor this function.  May need to move Yugabyte code elsewhere */
 void
-<<<<<<< inval.c
 InvalidateSystemCaches(void)
 {
+	...;
 	if (IsYugaByteEnabled()) {
 		// In case of YugaByte it is necessary to refresh YB caches by calling 'YBRefreshCache'.
 		// But it can't be done here as 'YBRefreshCache' can't be called from within the transaction.
@@ -765,18 +767,14 @@ InvalidateSystemCaches(void)
 		YbResetCatalogCacheVersion();
 		return;
 	}
-	InvalidateCatalogSnapshot();
-	ResetCatalogCaches();
-	RelationCacheInvalidate();	/* gets smgr and relmap too */
-	CallSystemCacheCallbacks();
+	...;
 }
+#endif
 
-=======
 CallSystemCacheCallbacks(void)
 {
 	InvalidateSystemCachesExtended(true, true /* yb_callback */);
 }
->>>>>>> inval.c
 
 /* ----------------------------------------------------------------
  *					  public functions
@@ -1066,16 +1064,12 @@ ProcessCommittedInvalidationMessages(SharedInvalidationMessage *msgs,
  * about CurrentCmdInvalidMsgs too, since those changes haven't touched
  * the caches yet.
  *
-<<<<<<< inval.c
  * YB Note: The above message for handling not isCommit is not true for YB
  * as we use aggressive caching. Any changes made as part of
  * CurrentCmdInvalidMsgs would have been applied to the cache and will need to
  * be invalidated as well.
  *
- * In any case, reset the various lists to empty.  We need not physically
-=======
  * In any case, reset our state to empty.  We need not physically
->>>>>>> inval.c
  * free memory here, since TopTransactionContext is about to be emptied
  * anyway.
  *

@@ -42,7 +42,6 @@
  * it ends up in infinite recursion, we will PANIC due to error stack
  * overflow.)
  *
-<<<<<<< elog.c
  * YB notes:
  * When Postgres code is executed in DocDB environment (what is commonly
  * referenced as "pushdown"), the logging and error handling do not work
@@ -94,11 +93,7 @@
  * look like original postgres errors.
  *
  *
- * Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
-=======
- *
  * Portions Copyright (c) 1996-2022, PostgreSQL Global Development Group
->>>>>>> elog.c
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -421,26 +416,14 @@ static void set_errdata_field(MemoryContextData *cxt, char **ptr, const char *st
 static void write_console(const char *line, int len);
 static const char *process_log_prefix_padding(const char *p, int *padding);
 static void log_line_prefix(StringInfo buf, ErrorData *edata);
-<<<<<<< elog.c
-static void write_csvlog(ErrorData *edata);
-static void send_message_to_server_log(ErrorData *edata);
-static void write_pipe_chunks(char *data, int len, int dest);
-static void send_message_to_frontend(ErrorData *edata);
-static char *expand_fmt_string(const char *fmt, ErrorData *edata);
-static const char *useful_strerror(int errnum);
-static const char *get_errno_symbol(int errnum);
-static const char *error_severity(int elevel);
-static void append_with_tabs(StringInfo buf, const char *str);
-static bool is_log_level_output(int elevel, int log_min_level);
-static void yb_log_errmsg_va(const char* fmt, va_list args);
-static void yb_errmsg_va(const char* fmt, va_list args);
-static void		   yb_message_from_status_data(StringInfo buf, const char *fmt,
-											   const size_t nargs, const char **args);
-=======
 static void send_message_to_server_log(ErrorData *edata);
 static void send_message_to_frontend(ErrorData *edata);
 static void append_with_tabs(StringInfo buf, const char *str);
 
+static void yb_log_errmsg_va(const char* fmt, va_list args);
+static void yb_errmsg_va(const char* fmt, va_list args);
+static void	yb_message_from_status_data(StringInfo buf, const char *fmt,
+										const size_t nargs, const char **args);
 
 /*
  * is_log_level_output -- is elevel logically >= log_min_level?
@@ -533,8 +516,6 @@ message_level_is_interesting(int elevel)
 		return true;
 	return false;
 }
-
->>>>>>> elog.c
 
 /*
  * in_error_recursion_trouble --- are we at risk of infinite error recursion?
@@ -1528,10 +1509,6 @@ errhint(const char *fmt,...)
 	return 0;					/* return value does not matter */
 }
 
-<<<<<<< elog.c
-/*
-=======
-
 /*
  * errhint_plural --- add a hint error message text to the current error,
  * with support for pluralization of the message text
@@ -1554,9 +1531,7 @@ errhint_plural(const char *fmt_singular, const char *fmt_plural,
 	return 0;					/* return value does not matter */
 }
 
-
 /*
->>>>>>> elog.c
  * errcontext_msg --- add a context error message text to the current error
  *
  * Unlike other cases, multiple calls are allowed to build up a stack of
@@ -1592,21 +1567,8 @@ errcontext_msg(const char *fmt, ...)
  * translate it.  Instead, each errcontext_msg() call should be preceded by
  * a set_errcontext_domain() call to specify the domain.  This is usually
  * done transparently by the errcontext() macro.
-<<<<<<< elog.c
- *
- * Although errcontext is primarily meant for use at call sites distant from
- * the original ereport call, there are a few places that invoke errcontext
- * within ereport.  The expansion of errcontext as a comma expression calling
- * set_errcontext_domain then errcontext_msg is problematic in this case,
- * because the intended comma expression becomes two arguments to errfinish,
- * which the compiler is at liberty to evaluate in either order.  But in
- * such a case, the set_errcontext_domain calls must be selecting the same
- * TEXTDOMAIN value that the errstart call did, so order does not matter
- * so long as errstart initializes context_domain along with domain.
  *
  * Ignored in YbGate environment.
-=======
->>>>>>> elog.c
  */
 int
 set_errcontext_domain(const char *domain)
@@ -1665,34 +1627,6 @@ errhidecontext(bool hide_ctx)
 	CHECK_STACK_DEPTH();
 
 	edata->hide_ctx = hide_ctx;
-<<<<<<< elog.c
-
-	return 0;					/* return value does not matter */
-}
-
-/*
- * errfunction --- add reporting function name to the current error
- *
- * This is used when backwards compatibility demands that the function
- * name appear in messages sent to old-protocol clients.  Note that the
- * passed string is expected to be a non-freeable constant string.
- *
- * Ignored in YbGate environment.
- */
-int
-errfunction(const char *funcname)
-{
-	RETURN_IF_MULTITHREADED_MODE();
-
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-
-	/* we don't bother incrementing recursion_depth */
-	CHECK_STACK_DEPTH();
-
-	edata->funcname = funcname;
-	edata->show_funcname = true;
-=======
->>>>>>> elog.c
 
 	return 0;					/* return value does not matter */
 }
@@ -1876,133 +1810,12 @@ getinternalerrposition(void)
 	return edata->internalpos;
 }
 
-/*
-<<<<<<< elog.c
- * elog_start --- startup for old-style API
- *
- * All that we do here is stash the hidden filename/lineno/funcname
- * arguments into a stack entry, along with the current value of errno.
- *
- * We need this to be separate from elog_finish because there's no other
- * C89-compliant way to deal with inserting extra arguments into the elog
- * call.  (When using C99's __VA_ARGS__, we could possibly merge this with
- * elog_finish, but there doesn't seem to be a good way to save errno before
- * evaluating the format arguments if we do that.)
+/* YB_TODO(neil)
+ *  - Check if the following assert needs to be called in Pg15 elog functions.
+ *  - It was called in pg11 elog function for Yugabyte.
+ *	Assert(!IsMultiThreadedMode());
  */
-void
-elog_start(const char *filename, int lineno, const char *funcname)
-{
-	ErrorData  *edata;
-
-	Assert(!IsMultiThreadedMode());
-	/* Make sure that memory context initialization has finished */
-	if (ErrorContext == NULL)
-	{
-		/* Oops, hard crash time; very little we can do safely here */
-		write_stderr("error occurred at %s:%d before error message processing is available\n",
-					 filename ? filename : "(unknown file)", lineno);
-		exit(2);
-	}
-
-	if (++errordata_stack_depth >= ERRORDATA_STACK_SIZE)
-	{
-		/*
-		 * Wups, stack not big enough.  We treat this as a PANIC condition
-		 * because it suggests an infinite loop of errors during error
-		 * recovery.  Note that the message is intentionally not localized,
-		 * else failure to convert it to client encoding could cause further
-		 * recursion.
-		 */
-		errordata_stack_depth = -1; /* make room on stack */
-		ereport(PANIC, (errmsg_internal("ERRORDATA_STACK_SIZE exceeded")));
-	}
-
-	edata = &errordata[errordata_stack_depth];
-	if (filename)
-	{
-		const char *slash;
-
-		/* keep only base name, useful especially for vpath builds */
-		slash = strrchr(filename, '/');
-		if (slash)
-			filename = slash + 1;
-	}
-	edata->filename = filename;
-	edata->lineno = lineno;
-	edata->funcname = funcname;
-	/* errno is saved now so that error parameter eval can't change it */
-	edata->saved_errno = errno;
-
-	/* Use ErrorContext for any allocations done at this level. */
-	edata->assoc_context = ErrorContext;
-}
-
 /*
- * elog_finish --- finish up for old-style API
- */
-void
-elog_finish(int elevel, const char *fmt,...)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	MemoryContext oldcontext;
-
-	Assert(!IsMultiThreadedMode());
-	CHECK_STACK_DEPTH();
-
-	/*
-	 * Do errstart() to see if we actually want to report the message.
-	 */
-	errordata_stack_depth--;
-	errno = edata->saved_errno;
-	if (!errstart(elevel, edata->filename, edata->lineno, edata->funcname, NULL))
-		return;					/* nothing to do */
-
-	/*
-	 * Format error message just like errmsg_internal().
-	 */
-	recursion_depth++;
-	oldcontext = MemoryContextSwitchTo(edata->assoc_context);
-
-	edata->message_id = fmt;
-	EVALUATE_MESSAGE(edata->domain, message, false, false);
-
-	MemoryContextSwitchTo(oldcontext);
-	recursion_depth--;
-
-	/*
-	 * And let errfinish() finish up.
-	 */
-	errfinish(0);
-}
-
-
-/*
-=======
- * When running within DocDB as the execution library we do not have the
- * error management framework fully set up yet.
- * So we just do our best to log an error and jump back to the pgapi.c
- * execution layer which should report the failure to DocDB.
- * TODO - Investigate how to best integrate with the regular error
- * framework to get better error messages/reporting (considering globals,
- * error stack, signal masks, etc.).
- */
-void yb_pgbackend_ereport(int elevel, const char *fmt,...) {
-	if (fmt != NULL)
-	{
-		YBCPgSetThreadLocalErrMsg(fmt);
-	}
-	jmp_buf *buffer = YBCPgGetThreadLocalJumpBuffer();
-	longjmp(*buffer, elevel);
-}
-
-/* Dummy function to cause errmsg call to be evaluated. */
-void yb_pgbackend_ereport_dummy(int dummy,...) {
-	/* Nothing to do. */
-	return;
-}
-
-/*
->>>>>>> elog.c
  * Functions to allow construction of error message strings separately from
  * the ereport() call itself.
  *
@@ -4108,101 +3921,6 @@ send_message_to_frontend(ErrorData *edata)
  * Support routines for formatting error messages.
  */
 
-
-/*
-<<<<<<< elog.c
- * expand_fmt_string --- process special format codes in a format string
- *
- * We must replace %m with the appropriate strerror string, since vsnprintf
- * won't know what to do with it.
- *
- * The result is a palloc'd string.
- */
-static char *
-expand_fmt_string(const char *fmt, ErrorData *edata)
-{
-	StringInfoData buf;
-	const char *cp;
-
-	initStringInfo(&buf);
-
-	for (cp = fmt; *cp; cp++)
-	{
-		if (cp[0] == '%' && cp[1] != '\0')
-		{
-			cp++;
-			if (*cp == 'm')
-			{
-				/*
-				 * Replace %m by system error string.  If there are any %'s in
-				 * the string, we'd better double them so that vsnprintf won't
-				 * misinterpret.
-				 */
-				const char *cp2;
-
-				cp2 = useful_strerror(edata->saved_errno);
-				for (; *cp2; cp2++)
-				{
-					if (*cp2 == '%')
-						appendStringInfoCharMacro(&buf, '%');
-					appendStringInfoCharMacro(&buf, *cp2);
-				}
-			}
-			else
-			{
-				/* copy % and next char --- this avoids trouble with %%m */
-				appendStringInfoCharMacro(&buf, '%');
-				appendStringInfoCharMacro(&buf, *cp);
-			}
-		}
-		else
-			appendStringInfoCharMacro(&buf, *cp);
-	}
-
-	return buf.data;
-}
-
-
-/*
- * A slightly cleaned-up version of strerror()
- */
-static const char *
-useful_strerror(int errnum)
-{
-	/* this buffer is only used if strerror() and get_errno_symbol() fail */
-	static char errorstr_buf[48];
-	const char *str;
-
-#ifdef WIN32
-	/* Winsock error code range, per WinError.h */
-	if (errnum >= 10000 && errnum <= 11999)
-		return pgwin32_socket_strerror(errnum);
-#endif
-	str = strerror(errnum);
-
-	/*
-	 * Some strerror()s return an empty string for out-of-range errno.  This
-	 * is ANSI C spec compliant, but not exactly useful.  Also, we may get
-	 * back strings of question marks if libc cannot transcode the message to
-	 * the codeset specified by LC_CTYPE.  If we get nothing useful, first try
-	 * get_errno_symbol(), and if that fails, print the numeric errno.
-	 */
-	if (str == NULL || *str == '\0' || *str == '?')
-		str = get_errno_symbol(errnum);
-
-	if (str == NULL)
-	{
-		snprintf(errorstr_buf, sizeof(errorstr_buf),
-		/*------
-		  translator: This string will be truncated at 47
-		  characters expanded. */
-				 _("operating system error %d"), errnum);
-		str = errorstr_buf;
-	}
-
-	return str;
-}
-
 /*
  * A multi-thread friendly version of useful_strerror()
  *
@@ -4246,181 +3964,6 @@ yb_strerror(int errnum)
 }
 
 /*
- * Returns a symbol (e.g. "ENOENT") for an errno code.
- * Returns NULL if the code is unrecognized.
- */
-static const char *
-get_errno_symbol(int errnum)
-{
-	switch (errnum)
-	{
-		case E2BIG:
-			return "E2BIG";
-		case EACCES:
-			return "EACCES";
-#ifdef EADDRINUSE
-		case EADDRINUSE:
-			return "EADDRINUSE";
-#endif
-#ifdef EADDRNOTAVAIL
-		case EADDRNOTAVAIL:
-			return "EADDRNOTAVAIL";
-#endif
-		case EAFNOSUPPORT:
-			return "EAFNOSUPPORT";
-#ifdef EAGAIN
-		case EAGAIN:
-			return "EAGAIN";
-#endif
-#ifdef EALREADY
-		case EALREADY:
-			return "EALREADY";
-#endif
-		case EBADF:
-			return "EBADF";
-#ifdef EBADMSG
-		case EBADMSG:
-			return "EBADMSG";
-#endif
-		case EBUSY:
-			return "EBUSY";
-		case ECHILD:
-			return "ECHILD";
-#ifdef ECONNABORTED
-		case ECONNABORTED:
-			return "ECONNABORTED";
-#endif
-		case ECONNREFUSED:
-			return "ECONNREFUSED";
-#ifdef ECONNRESET
-		case ECONNRESET:
-			return "ECONNRESET";
-#endif
-		case EDEADLK:
-			return "EDEADLK";
-		case EDOM:
-			return "EDOM";
-		case EEXIST:
-			return "EEXIST";
-		case EFAULT:
-			return "EFAULT";
-		case EFBIG:
-			return "EFBIG";
-#ifdef EHOSTUNREACH
-		case EHOSTUNREACH:
-			return "EHOSTUNREACH";
-#endif
-		case EIDRM:
-			return "EIDRM";
-		case EINPROGRESS:
-			return "EINPROGRESS";
-		case EINTR:
-			return "EINTR";
-		case EINVAL:
-			return "EINVAL";
-		case EIO:
-			return "EIO";
-#ifdef EISCONN
-		case EISCONN:
-			return "EISCONN";
-#endif
-		case EISDIR:
-			return "EISDIR";
-#ifdef ELOOP
-		case ELOOP:
-			return "ELOOP";
-#endif
-		case EMFILE:
-			return "EMFILE";
-		case EMLINK:
-			return "EMLINK";
-		case EMSGSIZE:
-			return "EMSGSIZE";
-		case ENAMETOOLONG:
-			return "ENAMETOOLONG";
-		case ENFILE:
-			return "ENFILE";
-		case ENOBUFS:
-			return "ENOBUFS";
-		case ENODEV:
-			return "ENODEV";
-		case ENOENT:
-			return "ENOENT";
-		case ENOEXEC:
-			return "ENOEXEC";
-		case ENOMEM:
-			return "ENOMEM";
-		case ENOSPC:
-			return "ENOSPC";
-		case ENOSYS:
-			return "ENOSYS";
-#ifdef ENOTCONN
-		case ENOTCONN:
-			return "ENOTCONN";
-#endif
-		case ENOTDIR:
-			return "ENOTDIR";
-#if defined(ENOTEMPTY) && (ENOTEMPTY != EEXIST) /* same code on AIX */
-		case ENOTEMPTY:
-			return "ENOTEMPTY";
-#endif
-#ifdef ENOTSOCK
-		case ENOTSOCK:
-			return "ENOTSOCK";
-#endif
-#ifdef ENOTSUP
-		case ENOTSUP:
-			return "ENOTSUP";
-#endif
-		case ENOTTY:
-			return "ENOTTY";
-		case ENXIO:
-			return "ENXIO";
-#if defined(EOPNOTSUPP) && (!defined(ENOTSUP) || (EOPNOTSUPP != ENOTSUP))
-		case EOPNOTSUPP:
-			return "EOPNOTSUPP";
-#endif
-#ifdef EOVERFLOW
-		case EOVERFLOW:
-			return "EOVERFLOW";
-#endif
-		case EPERM:
-			return "EPERM";
-		case EPIPE:
-			return "EPIPE";
-		case EPROTONOSUPPORT:
-			return "EPROTONOSUPPORT";
-		case ERANGE:
-			return "ERANGE";
-#ifdef EROFS
-		case EROFS:
-			return "EROFS";
-#endif
-		case ESRCH:
-			return "ESRCH";
-#ifdef ETIMEDOUT
-		case ETIMEDOUT:
-			return "ETIMEDOUT";
-#endif
-#ifdef ETXTBSY
-		case ETXTBSY:
-			return "ETXTBSY";
-#endif
-#if defined(EWOULDBLOCK) && (!defined(EAGAIN) || (EWOULDBLOCK != EAGAIN))
-		case EWOULDBLOCK:
-			return "EWOULDBLOCK";
-#endif
-		case EXDEV:
-			return "EXDEV";
-	}
-
-	return NULL;
-}
-
-
-/*
-=======
->>>>>>> elog.c
  * error_severity --- get string representing elevel
  *
  * The string is not localized here, but we mark the strings for translation

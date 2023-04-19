@@ -50,28 +50,14 @@
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_attrdef.h"
-<<<<<<< relcache.c
-#include "catalog/pg_authid.h"
-#include "catalog/pg_auth_members.h"
-#include "catalog/pg_cast.h"
-#include "catalog/pg_collation.h"
-=======
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
->>>>>>> relcache.c
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_database.h"
-#include "catalog/pg_db_role_setting.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
-<<<<<<< relcache.c
-#include "catalog/pg_operator.h"
 #include "catalog/pg_partitioned_table.h"
-#include "catalog/pg_policy.h"
-=======
-#include "catalog/pg_partitioned_table.h"
->>>>>>> relcache.c
 #include "catalog/pg_proc.h"
 #include "catalog/pg_publication.h"
 #include "catalog/pg_rewrite.h"
@@ -106,26 +92,22 @@
 #include "utils/resowner_private.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
-<<<<<<< relcache.c
-#include "utils/tqual.h"
-
-#include "access/yb_scan.h"
-#include "catalog/pg_yb_profile.h"
-#include "catalog/pg_yb_role_profile.h"
-#include "catalog/yb_catalog_version.h"
-#include "pg_yb_utils.h"
-=======
 
 /* Yugabyte includes */
 #include "access/yb_scan.h"
-#include "catalog/yb_catalog_version.h"
+#include "catalog/pg_cast.h"
+#include "catalog/pg_collation.h"
+#include "catalog/pg_db_role_setting.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_partitioned_table.h"
 #include "catalog/pg_policy.h"
+#include "catalog/pg_yb_profile.h"
+#include "catalog/pg_yb_role_profile.h"
+#include "catalog/yb_catalog_version.h"
 #include "commands/dbcommands.h"
 #include "partitioning/partdesc.h"
 #include "utils/partcache.h"
 #include "pg_yb_utils.h"
->>>>>>> relcache.c
 
 #define RELCACHE_INIT_FILEMAGIC		0x573266	/* version ID value */
 
@@ -1749,8 +1731,7 @@ YBUpdateRelationsAttributes(bool sys_relations_update_required)
 	 * info into the Relation entry, which among other things, sets up then constraint and default
 	 * info.
 	 */
-<<<<<<< relcache.c
-	Relation attrel = heap_open(AttributeRelationId, AccessShareLock);
+	Relation attrel = table_open(AttributeRelationId, AccessShareLock);
 	SysScanDesc scandesc = systable_beginscan(
 		attrel, InvalidOid, false /* indexOk */, NULL, 0, NULL);
 	YbAttrProcessorState state = {0};
@@ -1762,51 +1743,22 @@ YBUpdateRelationsAttributes(bool sys_relations_update_required)
 			YbCompleteAttrProcessing(&state);
 			YbStartNewAttrProcessing(
 			    &state, sys_relations_update_required, attrel, htup);
-=======
-	Relation pg_attribute_desc = table_open(AttributeRelationId, AccessShareLock);
-	SysScanDesc scandesc = systable_beginscan(
-	    pg_attribute_desc, AttributeRelationId, false /* indexOk */, NULL, 0, NULL);
-	YbAttrProcessorState state = {0};
-	HeapTuple pg_attribute_tuple;
-	while (HeapTupleIsValid(pg_attribute_tuple = systable_getnext(scandesc)))
-	{
-		if (!YbApply(&state, pg_attribute_desc, pg_attribute_tuple))
-		{
-			YbCompleteProcessing(&state);
-			YbStartNewProcessing(
-			    &state, sys_relations_update_required, pg_attribute_desc, pg_attribute_tuple);
->>>>>>> relcache.c
 		}
 	}
-<<<<<<< relcache.c
 	YbCompleteAttrProcessing(&state);
 	systable_endscan(scandesc);
-	heap_close(attrel, AccessShareLock);
-=======
-	YbCompleteProcessing(&state);
-	systable_endscan(scandesc);
-	table_close(pg_attribute_desc, AccessShareLock);
->>>>>>> relcache.c
+	table_close(attrel, AccessShareLock);
 }
 
 static void
 YBUpdateRelationsPartitioning(bool sys_relations_update_required)
 {
-<<<<<<< relcache.c
-	Relation partrel = heap_open(PartitionedRelationId, AccessShareLock);
+	Relation partrel = table_open(PartitionedRelationId, AccessShareLock);
 	SysScanDesc scandesc = systable_beginscan(
 	    partrel, PartitionedRelationId, false /* indexOk */, NULL, 0, NULL);
 
 	HeapTuple htup;
 	while (HeapTupleIsValid(htup = systable_getnext(scandesc)))
-=======
-	Relation pg_partitioned_table_desc = table_open(PartitionedRelationId, AccessShareLock);
-	SysScanDesc scandesc = systable_beginscan(
-	    pg_partitioned_table_desc, PartitionedRelationId, false /* indexOk */, NULL, 0, NULL);
-
-	HeapTuple pg_partition_tuple;
-	while (HeapTupleIsValid(pg_partition_tuple = systable_getnext(scandesc)))
->>>>>>> relcache.c
 	{
 		Form_pg_partitioned_table part_table_form =
 		    (Form_pg_partitioned_table) GETSTRUCT(htup);
@@ -1824,11 +1776,7 @@ YBUpdateRelationsPartitioning(bool sys_relations_update_required)
 	}
 
 	systable_endscan(scandesc);
-<<<<<<< relcache.c
-	heap_close(partrel, AccessShareLock);
-=======
-	table_close(pg_partitioned_table_desc, AccessShareLock);
->>>>>>> relcache.c
+	table_close(partrel, AccessShareLock);
 }
 
 typedef struct YbIndexProcessorState {
@@ -1989,7 +1937,7 @@ YbStartNewIndexProcessing(YbIndexProcessorState *state,
 static void
 YBUpdateRelationsIndicies(bool sys_relations_update_required)
 {
-	Relation indrel = heap_open(IndexRelationId, AccessShareLock);
+	Relation indrel = table_open(IndexRelationId, AccessShareLock);
 	SysScanDesc indscan = systable_beginscan(
 		indrel, IndexIndrelidIndexId, true /* indexOk */, NULL, 0, NULL);
 	HeapTuple htup;
@@ -2015,7 +1963,7 @@ YBUpdateRelationsIndicies(bool sys_relations_update_required)
 	}
 	YbCompleteIndexProcessing(&state);
 	systable_endscan(indscan);
-	heap_close(indrel, AccessShareLock);
+	table_close(indrel, AccessShareLock);
 }
 
 static void
@@ -2237,7 +2185,6 @@ YbPrefetch(YbTablePrefetcherState* prefetcher)
 	return NULL;
 }
 
-<<<<<<< relcache.c
 static void
 YbFillCatCache(YbTablePrefetcherState* prefetcher, YbPFetchTable table)
 {
@@ -2286,21 +2233,6 @@ YbRunWithPrefetcherImpl(
 	YBCPgResetCatalogReadTime();
 	YBCStartSysTablePrefetching(catalog_version, cache_mode);
 	YBCStatus result = NULL;
-=======
-static bool
-YBIsDBConnectionValid()
-{
-	/*
-	 * DB connection is not valid anymore in case:
-	 * - The name is already dropped from the cache.
-	 * - The name is still in the cache, but it is not associated with MyDatabaseId anymore
-	 *   (i.e. invalid or new DB).
-	 * - Any kind of error is raised. The reason of this case is sys table preloading mechanism.
-	 *   To reduce the total number of RPC postgres will send multiple read operations in single RPC.
-	 *   And these read operations tries to read data from MyDatabaseId tables. As a result in case
-	 *   the MyDatabaseId DB is dropped these read operations will fail due to "Not found" error.
-	 */
->>>>>>> relcache.c
 	PG_TRY();
 	{
 		YbRunWithPrefetcherContext ctx = {};
@@ -5613,16 +5545,16 @@ RelationCacheInitializePhase2(void)
 	if (!load_relcache_init_file(true))
 	{
 		formrdesc("pg_database", DatabaseRelation_Rowtype_Id, true,
-<<<<<<< relcache.c
-				  true, Natts_pg_database, Desc_pg_database);
+				  Natts_pg_database, Desc_pg_database);
 		formrdesc("pg_authid", AuthIdRelation_Rowtype_Id, true,
-				  true, Natts_pg_authid, Desc_pg_authid);
+				  Natts_pg_authid, Desc_pg_authid);
 		formrdesc("pg_auth_members", AuthMemRelation_Rowtype_Id, true,
-				  false, Natts_pg_auth_members, Desc_pg_auth_members);
+				  Natts_pg_auth_members, Desc_pg_auth_members);
 		formrdesc("pg_shseclabel", SharedSecLabelRelation_Rowtype_Id, true,
-				  false, Natts_pg_shseclabel, Desc_pg_shseclabel);
+				  Natts_pg_shseclabel, Desc_pg_shseclabel);
 		formrdesc("pg_subscription", SubscriptionRelation_Rowtype_Id, true,
-				  true, Natts_pg_subscription, Desc_pg_subscription);
+				  Natts_pg_subscription, Desc_pg_subscription);
+
 		if (*YBCGetGFlags()->ysql_enable_profile && YbLoginProfileCatalogsExist)
 		{
 			formrdesc("pg_yb_profile", YbProfileRelation_Rowtype_Id, true,
@@ -5636,19 +5568,6 @@ RelationCacheInitializePhase2(void)
 									 YbLoginProfileCatalogsExist \
 									 ? 7 \
 									 : 5)	/* fix if you change list above */
-=======
-				  Natts_pg_database, Desc_pg_database);
-		formrdesc("pg_authid", AuthIdRelation_Rowtype_Id, true,
-				  Natts_pg_authid, Desc_pg_authid);
-		formrdesc("pg_auth_members", AuthMemRelation_Rowtype_Id, true,
-				  Natts_pg_auth_members, Desc_pg_auth_members);
-		formrdesc("pg_shseclabel", SharedSecLabelRelation_Rowtype_Id, true,
-				  Natts_pg_shseclabel, Desc_pg_shseclabel);
-		formrdesc("pg_subscription", SubscriptionRelation_Rowtype_Id, true,
-				  Natts_pg_subscription, Desc_pg_subscription);
-
-#define NUM_CRITICAL_SHARED_RELS	5	/* fix if you change list above */
->>>>>>> relcache.c
 	}
 
 	MemoryContextSwitchTo(oldcxt);

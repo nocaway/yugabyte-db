@@ -24,22 +24,18 @@
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
-<<<<<<< mcxt.c
-#include "utils/builtins.h"
-=======
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "utils/fmgrprotos.h"
->>>>>>> mcxt.c
 #include "utils/memdebug.h"
 #include "utils/memutils.h"
 
-<<<<<<< mcxt.c
 /* YB includes */
 #include "pgstat.h"
 #include "pg_yb_utils.h"
 #include "commands/explain.h"
+#include "utils/builtins.h"
 #include "yb/yql/pggate/ybc_pggate.h"
 
 #ifdef __linux__
@@ -48,11 +44,6 @@
 #else
 #include <libproc.h>
 #endif
-=======
-/* Yugabyte includes */
-#include "yb/yql/pggate/ybc_pggate.h"
-#include "pg_yb_utils.h"
->>>>>>> mcxt.c
 
 YbPgMemTracker PgMemTracker = {0};
 
@@ -214,18 +205,10 @@ MemoryContext SetThreadLocalCurrentMemoryContext(MemoryContext memctx)
 	return (MemoryContext) YBCPgSetThreadLocalCurrentMemoryContext(memctx);
 }
 
-<<<<<<< mcxt.c
-MemoryContext
-CreateThreadLocalMemoryContext(MemoryContext parent,
-							   const char *name)
-{
-	return AllocSetContextCreateExtended(parent, name, ALLOCSET_START_SMALL_SIZES);
-=======
 MemoryContext CreateThreadLocalCurrentMemoryContext(MemoryContext parent,
 													const char *name)
 {
 	return AllocSetContextCreateInternal(parent, name, ALLOCSET_START_SMALL_SIZES);
->>>>>>> mcxt.c
 }
 
 void PrepareThreadLocalCurrentMemoryContext()

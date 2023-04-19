@@ -77,13 +77,8 @@
 #include "utils/xml.h"
 
 /* YB includes. */
-<<<<<<< ruleutils.c
 #include "catalog/pg_rewrite.h"
 #include "commands/tablegroup.h"
-
-=======
-#include "commands/tablegroup.h"
->>>>>>> ruleutils.c
 
 /* ----------
  * Pretty formatting constants
@@ -101,15 +96,12 @@
 #define PRETTYFLAG_PAREN		0x0001
 #define PRETTYFLAG_INDENT		0x0002
 #define PRETTYFLAG_SCHEMA		0x0004
-<<<<<<< ruleutils.c
 #define YB_PRETTYFLAG_ARRAY	0x0008
-=======
 
 /* Standard conversion of a "bool pretty" option to detailed flags */
 #define GET_PRETTY_FLAGS(pretty) \
 	((pretty) ? (PRETTYFLAG_PAREN | PRETTYFLAG_INDENT | PRETTYFLAG_SCHEMA) \
 	 : PRETTYFLAG_INDENT)
->>>>>>> ruleutils.c
 
 /* Default line length for pretty-print wrapping: 0 means wrap always */
 #define WRAP_COLUMN_DEFAULT		0
@@ -2574,13 +2566,7 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 					Oid			tblspc;
 
 					if (IsYBRelation(indexrel) && conForm->contype != CONSTRAINT_PRIMARY)
-<<<<<<< ruleutils.c
 						YbAppendIndexReloptions(&buf, indexId, YbGetTableProperties(indexrel));
-
-					Oid			tblspc;
-
-=======
-						YbAppendIndexReloptions(buf, indexId, YbGetTableProperties(indexrel));
 
 					/*
 					 * Print the tablespace, unless it's the database default.
@@ -2588,7 +2574,6 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 					 * which needs this behavior to recreate exact catalog
 					 * state.
 					 */
->>>>>>> ruleutils.c
 					tblspc = indexrel->rd_rel->reltablespace;
 					if (OidIsValid(tblspc))
 						appendStringInfo(&buf, " USING INDEX TABLESPACE %s",

@@ -21,25 +21,12 @@
 #include "access/table.h"
 #include "access/valid.h"
 #include "access/xact.h"
-<<<<<<< catcache.c
-#include "access/yb_scan.h"
-#include "catalog/catalog.h"
-#include "catalog/namespace.h"
-#include "catalog/pg_namespace.h"
-#include "catalog/pg_operator.h"
-#include "catalog/pg_proc.h"
-#include "catalog/pg_type.h"
-#include "catalog/pg_yb_tablegroup.h"
-#include "miscadmin.h"
-#include "nodes/pg_list.h"
-=======
 #include "catalog/pg_collation.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "common/hashfn.h"
 #include "miscadmin.h"
 #include "port/pg_bitutils.h"
->>>>>>> catcache.c
 #ifdef CATCACHE_STATS
 #include "storage/ipc.h"		/* for on_proc_exit */
 #endif
@@ -56,6 +43,7 @@
 /* Yugabytes includes */
 #include <string.h>
 #include "access/yb_scan.h"
+#include "catalog/catalog.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_proc.h"
@@ -572,16 +560,11 @@ CatCacheInvalidate(CatCache *cache, uint32 hashValue)
 	Index		hashIndex;
 	dlist_mutable_iter iter;
 
-<<<<<<< catcache.c
-	CACHE1_elog(DEBUG2, "CatCacheInvalidate: called");
+	CACHE_elog(DEBUG2, "CatCacheInvalidate: called");
 
 	/* We are modifying some part of the cache, so reset loaded status. */
 	cache->yb_cc_is_fully_loaded = false;
 
-=======
-	CACHE_elog(DEBUG2, "CatCacheInvalidate: called");
-
->>>>>>> catcache.c
 	/*
 	 * We don't bother to check whether the cache has finished initialization
 	 * yet; if not, there will be no entries in it so no problem.
@@ -1761,7 +1744,6 @@ SearchCatCacheMiss(CatCache *cache,
 	cur_skey[2].sk_argument = v3;
 	cur_skey[3].sk_argument = v4;
 
-<<<<<<< catcache.c
 	ct = NULL;
 
 	/*
@@ -1776,21 +1758,21 @@ SearchCatCacheMiss(CatCache *cache,
 									 true /* implicit negative entry */))
 	{
 		/*
-		* Tuple was not found in cache, so we have to try to retrieve it directly
-		* from the relation.  If found, we will add it to the cache; if not
-		* found, we will add a negative cache entry instead.
-		*
-		* NOTE: it is possible for recursive cache lookups to occur while reading
-		* the relation --- for example, due to shared-cache-inval messages being
-		* processed during heap_open().  This is OK.  It's even possible for one
-		* of those lookups to find and enter the very same tuple we are trying to
-		* fetch here.  If that happens, we will enter a second copy of the tuple
-		* into the cache.  The first copy will never be referenced again, and
-		* will eventually age out of the cache, so there's no functional problem.
-		* This case is rare enough that it's not worth expending extra cycles to
-		* detect.
-		*/
-		relation = heap_open(cache->cc_reloid, AccessShareLock);
+		 * Tuple was not found in cache, so we have to try to retrieve it directly
+		 * from the relation.  If found, we will add it to the cache; if not
+		 * found, we will add a negative cache entry instead.
+		 *
+		 * NOTE: it is possible for recursive cache lookups to occur while reading
+		 * the relation --- for example, due to shared-cache-inval messages being
+		 * processed during table_open().  This is OK.  It's even possible for one
+		 * of those lookups to find and enter the very same tuple we are trying to
+		 * fetch here.  If that happens, we will enter a second copy of the tuple
+		 * into the cache.  The first copy will never be referenced again, and
+		 * will eventually age out of the cache, so there's no functional problem.
+		 * This case is rare enough that it's not worth expending extra cycles to
+		 * detect.
+		 */
+		relation = table_open(cache->cc_reloid, AccessShareLock);
 
 		if (IsYugaByteEnabled())
 			NumCatalogCacheMisses++;
@@ -1801,10 +1783,10 @@ SearchCatCacheMiss(CatCache *cache,
 			initStringInfo(&buf);
 
 			/*
-			* For safety, disable catcache logging within the scope of this
-			* function as YBDatumToString below may trigger additional cache
-			* lookups (to get the attribute type info).
-			*/
+			 * For safety, disable catcache logging within the scope of this
+			 * function as YBDatumToString below may trigger additional cache
+			 * lookups (to get the attribute type info).
+			 */
 			yb_debug_log_catcache_events = false;
 			for (int i = 0; i < nkeys; i++)
 			{
@@ -1832,17 +1814,19 @@ SearchCatCacheMiss(CatCache *cache,
 		}
 
 		scandesc = systable_beginscan(relation,
-									cache->cc_indexoid,
-									IndexScanOK(cache, cur_skey),
-									NULL,
-									nkeys,
-									cur_skey);
+									  cache->cc_indexoid,
+									  IndexScanOK(cache, cur_skey),
+									  NULL,
+									  nkeys,
+									  cur_skey);
+
+		ct = NULL;
 
 		while (HeapTupleIsValid(ntp = systable_getnext(scandesc)))
 		{
 			ct = CatalogCacheCreateEntry(cache, ntp, arguments,
-										hashValue, hashIndex,
-										false);
+										 hashValue, hashIndex,
+										 false);
 			/* immediately set the refcount to 1 */
 			ResourceOwnerEnlargeCatCacheRefs(CurrentResourceOwner);
 			ct->refcount++;
@@ -1852,90 +1836,8 @@ SearchCatCacheMiss(CatCache *cache,
 
 		systable_endscan(scandesc);
 
-		heap_close(relation, AccessShareLock);
+		table_close(relation, AccessShareLock);
 	}
-=======
-	/*
-	 * Tuple was not found in cache, so we have to try to retrieve it directly
-	 * from the relation.  If found, we will add it to the cache; if not
-	 * found, we will add a negative cache entry instead.
-	 *
-	 * NOTE: it is possible for recursive cache lookups to occur while reading
-	 * the relation --- for example, due to shared-cache-inval messages being
-	 * processed during table_open().  This is OK.  It's even possible for one
-	 * of those lookups to find and enter the very same tuple we are trying to
-	 * fetch here.  If that happens, we will enter a second copy of the tuple
-	 * into the cache.  The first copy will never be referenced again, and
-	 * will eventually age out of the cache, so there's no functional problem.
-	 * This case is rare enough that it's not worth expending extra cycles to
-	 * detect.
-	 */
-	relation = table_open(cache->cc_reloid, AccessShareLock);
-
-	if (IsYugaByteEnabled())
-		NumCatalogCacheMisses++;
-
-	if (yb_debug_log_catcache_events)
-	{
-		StringInfoData buf;
-		initStringInfo(&buf);
-
-		/*
-		 * For safety, disable catcache logging within the scope of this
-		 * function as YBDatumToString below may trigger additional cache
-		 * lookups (to get the attribute type info).
-		 */
-		yb_debug_log_catcache_events = false;
-		for (int i = 0; i < nkeys; i++)
-		{
-			if (i > 0)
-				appendStringInfoString(&buf, ", ");
-
-			int attnum = cache->cc_keyno[i];
-			Oid typid = OIDOID; // default.
-			if (attnum > 0)
-				typid = TupleDescAttr(cache->cc_tupdesc, attnum - 1)->atttypid;
-
-			appendStringInfoString(&buf, YBDatumToString(cur_skey[i].sk_argument, typid));
-		}
-		ereport(LOG,
-		        (errmsg("Catalog cache miss on cache with id %d:\n"
-		                "Target rel: %s (oid : %d), index oid %d\n"
-		                "Search keys: %s",
-		                cache->id,
-		                cache->cc_relname,
-		                cache->cc_reloid,
-		                cache->cc_indexoid,
-		                buf.data)));
-		/* Done, reset catcache logging. */
-		yb_debug_log_catcache_events = true;
-	}
-
-	scandesc = systable_beginscan(relation,
-								  cache->cc_indexoid,
-								  IndexScanOK(cache, cur_skey),
-								  NULL,
-								  nkeys,
-								  cur_skey);
-
-	ct = NULL;
-
-	while (HeapTupleIsValid(ntp = systable_getnext(scandesc)))
-	{
-		ct = CatalogCacheCreateEntry(cache, ntp, arguments,
-									 hashValue, hashIndex,
-									 false);
-		/* immediately set the refcount to 1 */
-		ResourceOwnerEnlargeCatCacheRefs(CurrentResourceOwner);
-		ct->refcount++;
-		ResourceOwnerRememberCatCacheRef(CurrentResourceOwner, &ct->tuple);
-		break;					/* assume only one match */
-	}
-
-	systable_endscan(scandesc);
-
-	table_close(relation, AccessShareLock);
->>>>>>> catcache.c
 
 	/*
 	 * If tuple was not found, we need to build a negative cache entry

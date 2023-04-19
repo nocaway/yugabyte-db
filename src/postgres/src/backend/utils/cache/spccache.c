@@ -27,11 +27,6 @@
 #include "utils/catcache.h"
 #include "utils/hsearch.h"
 #include "utils/inval.h"
-<<<<<<< spccache.c
-#include "utils/jsonfuncs.h"
-#include "utils/memutils.h"
-=======
->>>>>>> spccache.c
 #include "utils/spccache.h"
 #include "utils/syscache.h"
 
@@ -41,6 +36,7 @@
 #include "optimizer/cost.h"
 #include "utils/builtins.h"
 #include "utils/jsonfuncs.h"
+#include "utils/memutils.h"
 #include "pg_yb_utils.h"
 
 /* Hash table for information about each tablespace */

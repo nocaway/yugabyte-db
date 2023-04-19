@@ -3432,11 +3432,7 @@ static struct config_int ConfigureNamesInt[] =
 			gettext_noop("Sets the minimum execution time above which "
 						 "a sample of statements will be logged."
 						 " Sampling is determined by log_statement_sample_rate."),
-<<<<<<< guc.c
-			gettext_noop("Zero log a sample of all queries. -1 turns this feature off."),
-=======
 			gettext_noop("Zero logs a sample of all queries. -1 turns this feature off."),
->>>>>>> guc.c
 			GUC_UNIT_MS
 		},
 		&log_min_duration_sample,
@@ -4965,27 +4961,11 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-<<<<<<< guc.c
-		{"transaction_isolation", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets the current transaction's isolation level."),
-			NULL,
-			GUC_NO_RESET_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&XactIsoLevel_string,
-		"default",
-		check_XactIsoLevel, assign_XactIsoLevel, show_XactIsoLevel
-	},
-	{
 		{"yb_effective_transaction_isolation_level", PGC_INTERNAL, CLIENT_CONN_STATEMENT,
 			gettext_noop(
 					"[DEPRECATED - instead use the yb_get_effective_transaction_isolation_level() function]. "
 					"Shows the effective YugabyteDB transaction isolation level used by the current active "
 					"transaction in the session."),
-=======
-		{"yb_effective_transaction_isolation_level", PGC_INTERNAL, CLIENT_CONN_STATEMENT,
-			gettext_noop("Shows the effective YugabyteDB transaction isolation level used by the current "
-									 "active transaction in the session."),
->>>>>>> guc.c
 			NULL,
 			GUC_NO_RESET_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
@@ -5283,28 +5263,27 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-<<<<<<< guc.c
+		{"backtrace_functions", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("Log backtrace for errors in these functions."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&backtrace_functions,
+		"",
+		check_backtrace_functions, assign_backtrace_functions, NULL
+	},
+
+	{
 		{"yb_test_block_index_phase", PGC_SIGHUP, DEVELOPER_OPTIONS,
 			gettext_noop("Block the given index creation phase."),
 			gettext_noop("Valid values are \"indisready\", \"backfill\", "
 						 " and \"postbackfill\". Any other value is ignored."),
-=======
-		{"backtrace_functions", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Log backtrace for errors in these functions."),
-			NULL,
->>>>>>> guc.c
 			GUC_NOT_IN_SAMPLE
 		},
-<<<<<<< guc.c
 		&yb_test_block_index_phase,
 		"",
 		/* Could add a check function, but it's not worth the bother. */
 		NULL, NULL, NULL
-=======
-		&backtrace_functions,
-		"",
-		check_backtrace_functions, assign_backtrace_functions, NULL
->>>>>>> guc.c
 	},
 
 	/* End-of-list marker */

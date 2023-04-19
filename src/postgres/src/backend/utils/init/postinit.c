@@ -81,23 +81,15 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/timeout.h"
-<<<<<<< postinit.c
-#include "utils/tqual.h"
 
+/* Yugabyte includes */
 #include "pg_yb_utils.h"
+#include "catalog/pg_auth_members.h"
 #include "catalog/pg_yb_catalog_version.h"
 #include "catalog/pg_yb_profile.h"
 #include "catalog/pg_yb_role_profile.h"
 #include "catalog/pg_yb_tablegroup.h"
 #include "catalog/yb_catalog_version.h"
-=======
-
-/* Yugabyte includes */
-#include "catalog/pg_auth_members.h"
-#include "catalog/pg_yb_tablegroup.h"
-#include "catalog/yb_catalog_version.h"
-#include "pg_yb_utils.h"
->>>>>>> postinit.c
 
 static HeapTuple GetDatabaseTuple(const char *dbname);
 static HeapTuple GetDatabaseTupleByOid(Oid dboid);
@@ -113,11 +105,7 @@ static void ClientCheckTimeoutHandler(void);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
 static void process_settings(Oid databaseid, Oid roleid);
-<<<<<<< postinit.c
-=======
 
-static void YbReleaseTserverCatalogInfo();
-static void YbResolveDBTserverCatalogVersion(const char* dbname);
 static void InitPostgresImpl(const char *in_dbname, Oid dboid,
 							 const char *username, Oid useroid,
 							 bool load_session_libraries,
@@ -125,7 +113,6 @@ static void InitPostgresImpl(const char *in_dbname, Oid dboid,
 							 char *out_dbname,
 							 bool* yb_sys_table_prefetching_started);
 static void YbEnsureSysTablePrefetchingStopped(bool sys_table_prefetching_started);
->>>>>>> postinit.c
 
 /*** InitPostgres support ***/
 
@@ -703,11 +690,6 @@ BaseInit(void)
  *		Be very careful with the order of calls in the InitPostgres function.
  * --------------------------------
  */
-<<<<<<< postinit.c
-static void
-InitPostgresImpl(const char *in_dbname, Oid dboid, const char *username,
-				 Oid useroid, char *out_dbname, bool override_allow_connections)
-=======
 void
 InitPostgres(const char *in_dbname, Oid dboid,
 			 const char *username, Oid useroid,
@@ -737,9 +719,7 @@ InitPostgresImpl(const char *in_dbname, Oid dboid,
 				 const char *username, Oid useroid,
 				 bool load_session_libraries,
 				 bool override_allow_connections,
-				 char *out_dbname,
-                 bool* yb_sys_table_prefetching_started)
->>>>>>> postinit.c
+				 char *out_dbname)
 {
 	bool		bootstrap = IsBootstrapProcessingMode();
 	bool		am_superuser;
@@ -830,10 +810,13 @@ InitPostgresImpl(const char *in_dbname, Oid dboid,
 	/* Initialize portal manager */
 	EnablePortalManager();
 
-<<<<<<< postinit.c
-	/* Initialize stats collection --- must happen before first xact */
-	if (!bootstrap)
-		pgstat_initialize();
+	/* Initialize status reporting */
+	pgstat_beinit();
+
+#ifdef YB_TODO
+	/* YB_TODO(neil) Move these code "pgstat_beinit();" ?
+	 * NOTE: Latest change has not been moved. Check "YB::master" code again for new changes.
+	 */
 
 	/* Connect to YugaByte cluster. */
 	if (bootstrap)
@@ -845,12 +828,6 @@ InitPostgresImpl(const char *in_dbname, Oid dboid,
 	{
 		HandleYBStatus(YBCPgTableExists(TemplateDbOid,
 										YbRoleProfileRelationId,
-=======
-	/* Initialize status reporting */
-	pgstat_beinit();
-
->>>>>>> postinit.c
-<<<<<<< postinit.c
 										&YbLoginProfileCatalogsExist));
 
 		const uint64_t catalog_master_version =
@@ -883,8 +860,8 @@ InitPostgresImpl(const char *in_dbname, Oid dboid,
 		 */
 		YbUpdateCatalogCacheVersion(YbGetMasterCatalogVersion());
 	}
-=======
->>>>>>> postinit.c
+#endif
+
 	/*
 	 * Load relcache entries for the shared system catalogs.  This must create
 	 * at least entries for pg_database and catalogs used for authentication.
@@ -1321,66 +1298,6 @@ YbEnsureSysTablePrefetchingStopped()
 		YBCStopSysTablePrefetching();
 }
 
-<<<<<<< postinit.c
-void
-InitPostgres(const char *in_dbname, Oid dboid, const char *username,
-             Oid useroid, char *out_dbname, bool override_allow_connections)
-{
-	PG_TRY();
-	{
-		InitPostgresImpl(
-			in_dbname, dboid, username, useroid, out_dbname,
-			override_allow_connections);
-	}
-	PG_CATCH();
-	{
-		YbEnsureSysTablePrefetchingStopped();
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-	YbEnsureSysTablePrefetchingStopped();
-}
-
-=======
-static void
-YbReleaseTserverCatalogInfo()
-{
-	if (!yb_tserver_catalog_info)
-		return;
-	if (yb_tserver_catalog_info->versions)
-		pfree(yb_tserver_catalog_info->versions);
-	pfree(yb_tserver_catalog_info);
-	yb_tserver_catalog_info = NULL;
-}
-
-static void
-YbResolveDBTserverCatalogVersion(const char* dbname)
-{
-	YbTserverCatalogVersion *ver = YbGetTserverCatalogVersion();
-	if (ver == NULL)
-		ereport(FATAL,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("database \"%s\" is not ready in YugaByte shared memory",
-						dbname)));
-	yb_my_database_id_shm_index = ver->shm_index;
-	Assert(yb_my_database_id_shm_index >= 0);
-	Assert(MyDatabaseId == ver->db_oid);
-	/*
-	 * Rather than fetching the current DB catalog version for MyDatabaseId
-	 * from master which requires another RPC that can cause the connection
-	 * establishment to slow down, we just set yb_catalog_cache_version from
-	 * that in the local tserver's catalog version ver. We expect in most
-	 * cases it will be identical to what we would get from master. However
-	 * it may be stale because of the heartbeat delay between the tserver
-	 * and master. If in rare cases we have set yb_catalog_cache_version to
-	 * a stale version, a future tserver to master hearbeat response will
-	 * bring the newer version and cause a cache refresh.
-	 */
-	yb_catalog_cache_version = ver->current_version;
-	YbReleaseTserverCatalogInfo();
-}
-
->>>>>>> postinit.c
 /*
  * Process any command-line switches and any additional GUC variable
  * settings passed in the startup packet.

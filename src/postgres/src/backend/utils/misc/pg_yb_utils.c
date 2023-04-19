@@ -247,16 +247,11 @@ YbIsTempRelation(Relation relation)
 
 bool IsRealYBColumn(Relation rel, int attrNum)
 {
-<<<<<<< pg_yb_utils.c
-	return (attrNum > 0 && !TupleDescAttr(rel->rd_att, attrNum - 1)->attisdropped) ||
-		   (rel->rd_rel->relhasoids && attrNum == ObjectIdAttributeNumber);
-=======
-	return (attrNum > 0 && !TupleDescAttr(rel->rd_att, attrNum - 1)->attisdropped);
+	return (attrNum > 0 && !TupleDescAttr(rel->rd_att, attrNum - 1)->attisdropped));
 #ifdef NEIL_OID
 			/* OID is now a regular column */
 	       || (rel->rd_rel->relhasoids && attrNum == ObjectIdAttributeNumber);
 #endif
->>>>>>> pg_yb_utils.c
 }
 
 bool IsYBSystemColumn(int attrNum)
@@ -3090,13 +3085,8 @@ void YbRegisterSysTableForPrefetching(int sys_table_id) {
 	{
 		// TemplateDb tables
 		case AuthMemRelationId:                           // pg_auth_members
-<<<<<<< pg_yb_utils.c
-			db_id = TemplateDbOid;
-			sys_table_index_id = AuthMemMemRoleIndexId;
-=======
-			sys_table_index_id = AuthMemMemRoleIndexId;
 			db_id = Template1DbOid;
->>>>>>> pg_yb_utils.c
+			sys_table_index_id = AuthMemMemRoleIndexId;
 			break;
 		case AuthIdRelationId:                            // pg_authid
 			db_id = Template1DbOid;
@@ -3107,17 +3097,12 @@ void YbRegisterSysTableForPrefetching(int sys_table_id) {
 			sys_table_index_id = DatabaseNameIndexId;
 			break;
 
-<<<<<<< pg_yb_utils.c
 		case DbRoleSettingRelationId:    switch_fallthrough(); // pg_db_role_setting
 		case TableSpaceRelationId:       switch_fallthrough(); // pg_tablespace
 		case YBCatalogVersionRelationId: switch_fallthrough(); // pg_yb_catalog_version
 		case YbProfileRelationId:        switch_fallthrough(); // pg_yb_profile
 		case YbRoleProfileRelationId:                          // pg_yb_role_profile
-			db_id = TemplateDbOid;
-=======
-		case DbRoleSettingRelationId:                     // pg_db_role_setting
 			db_id = Template1DbOid;
->>>>>>> pg_yb_utils.c
 			break;
 
 		// MyDb tables
